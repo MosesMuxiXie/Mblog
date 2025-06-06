@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Post a Blog | My Simple Blog</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; background: #f6f6f6; }
+    header { background: #444; color: #fff; padding: 1em; text-align: center; }
+    #content { max-width: 700px; margin: 2em auto; background: #fff; box-shadow: 0 0 10px #ddd; padding: 2em; }
+    input, textarea, button { font: inherit; }
+    input, textarea { width: 100%; margin: 0.5em 0 1em 0; padding: 0.7em; }
+    .back { color: #444; cursor: pointer; display:inline-block; margin-bottom:1em; }
+    @media (max-width: 600px) {
+      #content { padding: 1em; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Admin: Post Blog</h1>
+    <a href="index.html" style="color:#fff;text-decoration:underline;font-size:0.9em;">Back to Blog List</a>
+  </header>
+  <div id="content">
+    <form id="blogForm">
+      <h2>New Blog Post</h2>
+      <input type="text" id="title" placeholder="Title" required>
+      <textarea id="contentField" rows="8" placeholder="Your blog content..." required></textarea>
+      <input type="password" id="password" placeholder="Admin password" required>
+      <button type="submit">Post Blog</button>
+      <div id="message" style="color:red;margin-top:1em;"></div>
+    </form>
+  </div>
+  <script>
+    document.getElementById('blogForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('contentField').value.trim();
+      const password = document.getElementById('password').value;
+      const res = await fetch('/api/blogs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ title, content, password })
+      });
+      const result = await res.json();
+      if (res.ok) {
+        document.getElementById('message').textContent = "Blog posted!";
+        document.getElementById('blogForm').reset();
+      } else {
+        document.getElementById('message').textContent = result.error || 'Error posting blog.';
+      }
+    };
+  </script>
+</body>
+</html>

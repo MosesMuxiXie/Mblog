@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>My Simple Blog</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; background: #f6f6f6; }
+    header { background: #444; color: #fff; padding: 1em; text-align: center; }
+    #content { max-width: 700px; margin: 2em auto; background: #fff; box-shadow: 0 0 10px #ddd; padding: 2em; }
+    .blog-summary { cursor: pointer; border-bottom: 1px solid #eee; padding: 1em 0; }
+    .blog-summary:hover { background: #f0f0f0; }
+    .blog-title { font-size: 1.3em; font-weight: bold; }
+    form { margin-top: 2em; }
+    input, textarea, button { font: inherit; }
+    input, textarea { width: 100%; margin: 0.5em 0 1em 0; padding: 0.7em; }
+    .comment { border-top: 1px solid #eee; padding: 0.8em 0; }
+    .comment-name { font-weight: bold; }
+    .reply-section { margin-top: 2em; }
+    .back { color: #444; cursor: pointer; display:inline-block; margin-bottom:1em; }
+    @media (max-width: 600px) {
+      #content { padding: 1em; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>My Simple Blog</h1>
+    <a href="admin.html" style="color:#fff;text-decoration:underline;font-size:0.9em;">Admin: Post Blog</a>
+  </header>
+  <div id="content">
+    <!-- Blog list will be injected here -->
+  </div>
+  <script>
+    let blogs = [];
+    let currentBlog = null;
+
+    async function fetchBlogs() {
+      const res = await fetch('/api/blogs');
+      blogs = await res.json();
+      showList();
+    }
+
+    function showList() {
+      currentBlog = null;
+      document.getElementById('content').innerHTML = blogs.length === 0
+        ? '<p>No blogs yet.</p>'
+        : blogs.map(blog => `
+            <div class="blog-summary" onclick="showBlog(${blog.id})">
+              <div class="blog-title">${blog.title}</div>
+              <div>${blog.content.substring(0, 120)}...</div>
+              <div style="font-size:0.9em;color:#888;">${blog.comments.length} Comment(s)</div>
+            </div>
+          `).join('');
+    }
+
+    async function showBlog(id) {
+      const res = await fetch('/api/blogs/' + id);
+      const blog = await res.json();
+      currentBlog = blog;
+      document.getElementById('content').innerHTML = `
+        <span class="back" onclick="showList()">&larr; Back to Blog List</span>
+        <h2>${blog.title}</h2>
+        <div>${blog.content.replace(/\n/g, '<br>')}</div>
+        <div class="reply-section">
+          <h3>Comments (${blog.comments.length})</h3>
+          ${blog.comments.map(c => `
+            <div class="comment">
+              <div class="comment-name">${c.name}</div>
+              <div>${c.text.replace(/\n/g, '<br>')}</div>
+            </div>
+          `).join('')}
+          <form onsubmit="return addComment(event)">
+            <h4>Leave a Reply</h4>
+            <input type="text" id="name" placeholder="Your Name" required>
+            <textarea id="text" rows="3" placeholder="Your Comment" required></textarea>
+            <button type="submit">Post Comment</button>
+          </form>
+        </div>
+      `;
+    }
+
+    async function addComment(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const text = document.getElementById('text').value.trim();
+      if (!name || !text) return;
+      await fetch('/api/blogs/' + currentBlog.id + '/comments', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name, text })
+      });
+      showBlog(currentBlog.id);
+    }
+
+    window.showBlog = showBlog; // for inline onclick
+
+    fetchBlogs();
+  </script>
+</body>
+</html>
