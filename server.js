@@ -21,7 +21,7 @@ function saveBlogs(blogs) {
 }
 
 // Get all blogs (most recent first)
-app.get('/api/blogs', (req, res) => {
+app.get('/blogs', (req, res) => {
   const blogs = loadBlogs();
   res.json(blogs.map(blog => ({
     id: blog.id, title: blog.title, excerpt: blog.excerpt, image: blog.image,
@@ -30,7 +30,7 @@ app.get('/api/blogs', (req, res) => {
 });
 
 // Get single blog with comments
-app.get('/api/blogs/:id', (req, res) => {
+app.get('/blogs/:id', (req, res) => {
   const blogs = loadBlogs();
   const blog = blogs.find(b => b.id === req.params.id);
   if (!blog) return res.status(404).json({ error: 'Not found' });
@@ -38,7 +38,7 @@ app.get('/api/blogs/:id', (req, res) => {
 });
 
 // Post a new blog (simple admin password)
-app.post('/api/blogs', (req, res) => {
+app.post('/blogs', (req, res) => {
   const { title, content, excerpt, image, tags, author, password } = req.body;
   if (password !== 'admin123') return res.status(401).json({ error: 'Unauthorized' });
   if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
@@ -54,7 +54,7 @@ app.post('/api/blogs', (req, res) => {
 });
 
 // Add comment to blog
-app.post('/api/blogs/:id/comments', (req, res) => {
+app.post('/blogs/:id/comments', (req, res) => {
   const { name, text } = req.body;
   if (!name || !text) return res.status(400).json({ error: 'Name and text required' });
   const blogs = loadBlogs();
