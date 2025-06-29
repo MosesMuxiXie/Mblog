@@ -37,7 +37,7 @@
     let currentBlog = null;
 
     async function fetchBlogs() {
-      const res = await fetch('/api/blogs');
+      const res = await fetch('/blogs');
       blogs = await res.json();
     }
 
@@ -70,7 +70,7 @@
     }
 
     async function showBlog(id) {
-      const res = await fetch('/api/blogs/' + id);
+      const res = await fetch('/blogs/' + id);
       const blog = await res.json();
       currentBlog = blog;
       document.getElementById('blog-detail').innerHTML = `
@@ -108,7 +108,7 @@
         const name = document.getElementById('c-name').value.trim();
         const text = document.getElementById('c-text').value.trim();
         if (!name || !text) return;
-        await fetch('/api/blogs/' + blog.id + '/comments', {
+        await fetch('/blogs/' + blog.id + '/comments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, text })
