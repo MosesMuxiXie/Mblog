@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = 80;
 const BLOGS_FILE = path.join(__dirname, 'blogs.json');
 
 app.use(bodyParser.json({ limit: '1mb' }));
