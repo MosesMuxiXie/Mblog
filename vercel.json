@@ -1,7 +1,14 @@
 {
-"functions": {
-    "api/**.js": {
-    "includeFiles": ["blogs.json"]
+    "functions": {
+      "api/blogs/index.js": {
+        "includeFiles": "blogs.json"
+      },
+      "api/blogs/[id].js": {
+        "includeFiles": "blogs.json"
+      },
+      "api/blogs/[id]/comments.js": {
+        "includeFiles": "blogs.json"
+      }
     }
-}
-}
+  }
+  
