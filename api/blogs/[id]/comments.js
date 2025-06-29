@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const BLOGS_FILE = path.join(process.cwd(), 'blogs.json');
+// const BLOGS_FILE = path.join(process.cwd(), 'blogs.json');
+const BLOGS_FILE = path.join('/tmp', 'blogs.json');
+
 
 export default function handler(req, res) {
   const { id } = req.query;
