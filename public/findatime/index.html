@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="无需登录，快速收集大家方便的约会时间。">
+  <title>findatime · 轻松约时间</title>
+  <link rel="stylesheet" href="/findatime/findatime.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/findatime">finda<span>time</span></a>
+    <a class="home-link" href="/">返回 mosankai.com</a>
+  </header>
+
+  <main class="page-shell">
+    <aside class="illustration-space" aria-label="预留插图区域">
+      <div class="illustration-label">
+        <strong>一起找到刚刚好的时间</strong>
+        <span>此区域已为你的品牌插图预留</span>
+      </div>
+    </aside>
+
+    <section id="creator-view" class="card">
+      <div class="eyebrow">无需登录 · 中国标准时间</div>
+      <h1>找一个大家都方便的时间。</h1>
+      <p class="lead">创建约会、分享链接，让每个人勾选可参加的时间。最多添加 10 个选项。</p>
+
+      <div class="progress" aria-label="创建进度">
+        <span id="progress-one" class="active"><b>1</b> 选择时长</span><i></i>
+        <span id="progress-two"><b>2</b> 添加时间</span>
+      </div>
+
+      <div id="step-one">
+        <div class="field">
+          <label for="meeting-title">约会名称</label>
+          <input id="meeting-title" type="text" maxlength="80" placeholder="例如：项目启动会" autocomplete="off">
+        </div>
+        <fieldset class="field" style="border:0;padding:0">
+          <legend class="field-label">约会时长</legend>
+          <div id="duration-options" class="duration-grid"></div>
+          <span class="hint">从 30 分钟到 8 小时，每 30 分钟一个选项。</span>
+        </fieldset>
+        <div id="step-one-error" class="error" role="alert"></div>
+        <div class="actions"><button id="next-step" class="button" type="button">下一步：选择时间</button></div>
+      </div>
+
+      <div id="step-two" class="hidden">
+        <div class="slot-adder">
+          <div class="field"><label for="slot-date">日期</label><input id="slot-date" type="date"></div>
+          <div class="field"><label for="slot-time">开始时间</label><select id="slot-time"></select></div>
+          <button id="add-slot" class="button small" type="button">添加时间</button>
+        </div>
+        <div id="slot-count" class="slot-count"></div>
+        <div id="slot-list" class="slot-list"></div>
+        <div id="step-two-error" class="error" role="alert"></div>
+        <div class="actions">
+          <button id="back-step" class="button secondary" type="button">上一步</button>
+          <button id="create-meeting" class="button" type="button">创建并获取链接</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="meeting-view" class="card hidden">
+      <div id="meeting-loading" class="loading">正在载入约会…</div>
+      <div id="meeting-content" class="hidden">
+        <div class="eyebrow">findatime · 投票</div>
+        <h1 id="meeting-title-view"></h1>
+        <div class="meeting-meta">
+          <span id="meeting-duration" class="pill"></span>
+          <span id="meeting-timezone" class="pill"></span>
+          <span id="participant-total" class="pill"></span>
+        </div>
+        <div id="meeting-summary" class="summary" aria-live="polite"></div>
+        <form id="vote-form">
+          <div class="field">
+            <label for="participant-name">你的姓名</label>
+            <input id="participant-name" type="text" maxlength="40" placeholder="输入姓名" autocomplete="name">
+          </div>
+          <div class="field-label">勾选你方便参加的时间</div>
+          <div id="vote-list" class="vote-list"></div>
+          <div id="vote-error" class="error" role="alert"></div>
+          <div id="vote-success" class="hint" aria-live="polite"></div>
+          <div class="actions"><button id="submit-vote" class="button" type="submit">提交我的时间</button></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <div id="share-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="share-title">
+    <div class="modal">
+      <div class="eyebrow">创建成功</div>
+      <h2 id="share-title">把链接发给大家</h2>
+      <p>任何人都可以直接打开链接并提交方便的时间，无需登录。</p>
+      <div class="copy-row">
+        <input id="share-link" type="text" readonly aria-label="约会链接">
+        <button id="copy-link" class="button small" type="button">复制链接</button>
+      </div>
+      <div class="actions"><a id="view-meeting" class="button" href="#" style="display:inline-grid;place-items:center;text-decoration:none">查看汇总</a></div>
+    </div>
+  </div>
+
+  <script src="/findatime/findatime.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+.env
+.env.local
+findatime-meetings.json
+npm-debug.log*
+
+.vercel
+.env*
+!.env.example
+
+.env*
