@@ -9,7 +9,7 @@
   --teal: #227b72;
   --teal-soft: #dceee9;
   --shadow: 0 24px 70px rgba(62, 50, 35, .13);
-  --background-illustration: url('/findatime/background-illustration.webp');
+  --background-illustration: url('/findatime/background-illustration.jpeg');
 }
 
 * { box-sizing: border-box; }
