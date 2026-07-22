@@ -9,6 +9,9 @@
       "api/blogs/[id]/comments.js": {
         "includeFiles": "blogs.json"
       }
-    }
+    },
+    "rewrites": [
+      { "source": "/findatime", "destination": "/findatime/index.html" },
+      { "source": "/findatime/uuid/:id", "destination": "/findatime/index.html" }
+    ]
   }
-  
