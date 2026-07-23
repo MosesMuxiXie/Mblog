@@ -11,6 +11,7 @@
       }
     },
     "rewrites": [
+      { "source": "/blog", "destination": "/blog.html" },
       { "source": "/findatime", "destination": "/findatime/index.html" },
       { "source": "/findatime/uuid/:id", "destination": "/findatime/index.html" }
     ]

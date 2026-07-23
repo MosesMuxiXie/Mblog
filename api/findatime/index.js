@@ -1,18 +1,9 @@
 const crypto = require('crypto');
 const { createMeeting } = require('../../lib/meetingStore');
+const { normalizeMeetingSlots, validTimeZone } = require('../../lib/meetingTime');
 
 function sendError(res, status, error) {
   return res.status(status).json({ error });
-}
-
-function validLocalDateTime(value) {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return false;
-  const [date, time] = value.split('T');
-  const [year, month, day] = date.split('-').map(Number);
-  const [hour, minute] = time.split(':').map(Number);
-  const parsed = new Date(Date.UTC(year, month - 1, day, hour, minute));
-  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 &&
-    parsed.getUTCDate() === day && hour >= 0 && hour <= 23 && (minute === 0 || minute === 30);
 }
 
 module.exports = async function handler(req, res) {
@@ -22,13 +13,16 @@ module.exports = async function handler(req, res) {
     const title = String(req.body?.title || '').trim().slice(0, 80);
     const duration = Number(req.body?.duration);
     const submittedSlots = Array.isArray(req.body?.slots) ? req.body.slots : [];
-    const slots = [...new Set(submittedSlots.map(value => String(value)))].sort();
+    const submittedTimeZone = req.body?.timezone;
+    const timezone = submittedTimeZone == null ? 'Asia/Shanghai' : String(submittedTimeZone);
+    const slots = normalizeMeetingSlots(submittedSlots, submittedTimeZone == null);
 
     if (!title) return sendError(res, 400, '请输入约会名称');
     if (!Number.isInteger(duration) || duration < 30 || duration > 480 || duration % 30 !== 0) {
       return sendError(res, 400, '时长必须为 30 分钟到 8 小时，并以 30 分钟递增');
     }
-    if (!slots.length || slots.length > 10 || slots.some(value => !validLocalDateTime(value))) {
+    if (!validTimeZone(timezone)) return sendError(res, 400, '浏览器时区无效');
+    if (!slots || !slots.length || slots.length > 10) {
       return sendError(res, 400, '请选择 1–10 个有效的整点或半点时间');
     }
 
@@ -36,13 +30,13 @@ module.exports = async function handler(req, res) {
     const creatorToken = crypto.randomBytes(18).toString('base64url');
     const meetingSlots = slots.map((start, index) => ({
       id: `t${index + 1}`,
-      start: `${start}:00+08:00`
+      start
     }));
     const meeting = {
       id,
       title,
       duration,
-      timezone: 'Asia/Shanghai',
+      timezone,
       createdAt: new Date().toISOString(),
       slots: meetingSlots
     };
