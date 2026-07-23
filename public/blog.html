@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Blog | Mosankai</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="blog.css">
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <div class="hero" style="background-image:url('img/m48a5_patton_cn.jpg')">
+        <h1>tanks</h1>
+        <p>Explore.<br>Shoot.<br>Write.</p>
+        <div class="author">A tank lover's personal blog<br>By Moses Xie</div>
+        <div style="margin-top:2em;font-size:1.3em;">
+          <a href="#" style="color:#fff;margin-right:0.5em;"><span title="Twitter">🐦</span></a>
+          <a href="#" style="color:#fff;margin-right:0.5em;"><span title="Facebook">📘</span></a>
+          <a href="#" style="color:#fff;"><span title="Subscribe">🔔</span></a>
+        </div>
+      </div>
+    </div>
+    <div class="main">
+      <nav>
+        <a href="/">HOME</a>
+        <a href="#" class="active" onclick="showList();return false;">ARTICLES</a>
+        <a href="#" onclick="alert('Suggest feature coming soon!');return false;">SUGGEST</a>
+        <a href="#" onclick="alert('Subscribe feature coming soon!');return false;">SUBSCRIBE</a>
+        <a href="#" onclick="alert('About section coming soon!');return false;">ABOUT</a>
+        <a href="/findatime">FINDATIME</a>
+        <a href="admin.html" style="margin-left:auto;">ADMIN</a>
+      </nav>
+      <div id="blog-list" class="blog-list"></div>
+      <div id="blog-detail" style="display:none;max-width:700px;margin:2.2em auto;"></div>
+    </div>
+  </div>
+  <script>
+    let blogs = [];
+    let currentBlog = null;
+
+    async function fetchBlogs() {
+      const res = await fetch('/api/blogs');
+      blogs = await res.json();
+    }
+
+    function renderBlogList() {
+      const list = blogs.map(blog => `
+        <div class="blog-item" onclick="showBlog('${blog.id}')">
+          <img src="${blog.image || '/img/default.jpg'}" class="blog-thumb" alt="Blog image">
+          <div class="blog-meta">
+            <div class="blog-title">${blog.title}</div>
+            <div class="blog-excerpt">${blog.excerpt || ''}</div>
+            <div class="blog-info">
+              ${blog.date} &nbsp;|&nbsp; ${blog.author || 'Anonymous'}
+            </div>
+            <div class="blog-tags">
+              ${(blog.tags||[]).map(tag => `<span class="blog-tag">${tag}</span>`).join(' ')}
+            </div>
+          </div>
+          <span class="blog-arrow">&rsaquo;</span>
+        </div>
+      `).join('');
+      document.getElementById('blog-list').innerHTML = list || "<p>No posts yet.</p>";
+      document.getElementById('blog-list').style.display = '';
+      document.getElementById('blog-detail').style.display = 'none';
+    }
+
+    async function showList() {
+      await fetchBlogs();
+      renderBlogList();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function showBlog(id) {
+      const res = await fetch('/api/blogs/' + id);
+      const blog = await res.json();
+      currentBlog = blog;
+      document.getElementById('blog-detail').innerHTML = `
+        <a href="#" onclick="showList();return false;" style="color:#1976d2;">&larr; Back to Articles</a>
+        <h2 style="margin-top:0.7em;color:#1976d2;">${blog.title}</h2>
+        <div style="margin-bottom:1em;font-size:1.05em;color:#888;">
+          ${blog.date} &nbsp;|&nbsp; ${blog.author || 'Anonymous'}
+        </div>
+        <img src="${blog.image}" style="width:100%;max-height:350px;object-fit:cover;border-radius:10px;margin-bottom:1.3em;">
+        <div style="font-size:1.11em;line-height:1.7;margin-bottom:1.9em;white-space:pre-line;">${blog.content}</div>
+        <div style="margin-bottom:1.3em;">
+          ${(blog.tags||[]).map(tag => `<span class="blog-tag">${tag}</span>`).join(' ')}
+        </div>
+        <div style="margin:2em 0 1em 0;">
+          <h3 style="color:#1976d2;margin-bottom:0.5em;">Comments</h3>
+          <div id="comments">
+            ${(blog.comments||[]).map(c => `
+              <div style="border-bottom:1px solid #eee;padding:0.5em 0;">
+                <b>${c.name}</b> <span style="color:#888;font-size:0.92em;">(${c.date})</span><br>
+                <div style="margin-top:0.2em;">${c.text.replace(/\n/g,'<br>')}</div>
+              </div>
+            `).join('') || '<div style="color:#888;">No comments yet.</div>'}
+          </div>
+          <form id="comment-form" style="margin-top:1em;">
+            <input type="text" id="c-name" placeholder="Your name" required style="width:45%;padding:0.6em;margin-right:1em;">
+            <textarea id="c-text" placeholder="Your comment..." required style="width:98%;min-height:66px;padding:0.7em;margin:0.45em 0;"></textarea>
+            <button type="submit" style="background:#1976d2;color:#fff;padding:0.6em 1.7em;border:none;border-radius:7px;font-size:1em;">Post Comment</button>
+          </form>
+        </div>
+      `;
+      document.getElementById('blog-list').style.display = 'none';
+      document.getElementById('blog-detail').style.display = '';
+      document.getElementById('comment-form').onsubmit = async function(e) {
+        e.preventDefault();
+        const name = document.getElementById('c-name').value.trim();
+        const text = document.getElementById('c-text').value.trim();
+        if (!name || !text) return;
+        await fetch('/api/blogs/' + blog.id + '/comments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, text })
+        });
+        showBlog(blog.id);
+      };
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.showBlog = showBlog;
+    showList();
+  </script>
+</body>
+</html>

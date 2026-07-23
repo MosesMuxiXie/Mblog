@@ -1,4 +1,5 @@
-const state = { duration: 60, slots: [], meeting: null };
+const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+const state = { duration: 60, slots: [], meeting: null, timezone: browserTimeZone };
 const byId = id => document.getElementById(id);
 
 function escapeText(value) {
@@ -13,24 +14,66 @@ function durationText(minutes) {
   return `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分钟`;
 }
 
-function parseShanghai(value) {
-  const [datePart, timePart] = value.slice(0, 16).split('T');
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hour, minute] = timePart.split(':').map(Number);
-  return { year, month, day, hour, minute };
+function localDateValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function localDateTimeToIso(dateValue, timeValue) {
+  const candidate = new Date(`${dateValue}T${timeValue}:00`);
+  if (Number.isNaN(candidate.getTime())) return null;
+  const [year, month, day] = dateValue.split('-').map(Number);
+  const [hour, minute] = timeValue.split(':').map(Number);
+  if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 ||
+      candidate.getDate() !== day || candidate.getHours() !== hour || candidate.getMinutes() !== minute) {
+    return null;
+  }
+  return candidate.toISOString();
+}
+
+function timeZoneText() {
+  const now = new Date();
+  const zoneName = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: state.timezone,
+    timeZoneName: 'long'
+  }).formatToParts(now).find(part => part.type === 'timeZoneName')?.value || state.timezone;
+  const offset = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: state.timezone,
+    timeZoneName: 'longOffset'
+  }).formatToParts(now).find(part => part.type === 'timeZoneName')?.value;
+  return offset && offset !== zoneName ? `${zoneName}（${offset}）` : zoneName;
 }
 
 function timeText(value, includeYear = false) {
-  const { year, month, day, hour, minute } = parseShanghai(value);
-  const period = hour < 6 ? '凌晨' : hour < 12 ? '上午' : hour < 13 ? '中午' : hour < 18 ? '下午' : '晚上';
-  const twelveHour = hour % 12 || 12;
-  const minuteText = minute ? `${String(minute).padStart(2, '0')}分` : '';
-  return `${includeYear ? `${year}年` : ''}${month}月${day}日${period}${twelveHour}点${minuteText}`;
+  const date = new Date(value);
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: state.timezone,
+    ...(includeYear ? { year: 'numeric' } : {}),
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }).format(date);
 }
 
 function slotParts(value) {
-  const { month, day, hour, minute } = parseShanghai(value);
-  return { date: `${month}月${day}日`, time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` };
+  const date = new Date(value);
+  return {
+    date: new Intl.DateTimeFormat('zh-CN', {
+      timeZone: state.timezone,
+      month: 'long',
+      day: 'numeric'
+    }).format(date),
+    time: new Intl.DateTimeFormat('zh-CN', {
+      timeZone: state.timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).format(date)
+  };
 }
 
 function setError(message, target = 'step-two-error') {
@@ -81,7 +124,8 @@ function setupCreator() {
   renderDurationOptions();
   renderSlots();
 
-  const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  byId('creator-timezone').textContent = `当前时区：${timeZoneText()}`;
+  const today = localDateValue();
   byId('slot-date').min = today;
   byId('slot-date').value = today;
   byId('slot-time').innerHTML = Array.from({ length: 48 }, (_, index) => {
@@ -101,7 +145,8 @@ function setupCreator() {
     const date = byId('slot-date').value;
     const time = byId('slot-time').value;
     if (!date || !time) return setError('请选择日期和时间');
-    const value = `${date}T${time}`;
+    const value = localDateTimeToIso(date, time);
+    if (!value) return setError('这个时间在当前时区不存在，请选择其他时间');
     if (state.slots.includes(value)) return setError('这个时间已经添加过了');
     if (state.slots.length >= 10) return setError('最多可以添加 10 个时间');
     state.slots.push(value);
@@ -118,7 +163,12 @@ function setupCreator() {
       const response = await fetch('/api/findatime', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: byId('meeting-title').value.trim(), duration: state.duration, slots: state.slots })
+        body: JSON.stringify({
+          title: byId('meeting-title').value.trim(),
+          duration: state.duration,
+          timezone: state.timezone,
+          slots: state.slots
+        })
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || '创建失败');
@@ -156,7 +206,7 @@ function renderMeeting(meeting) {
   byId('summary-best-times').textContent = summary.times;
   byId('summary-attendance').textContent = `${summary.maxVotes}/${meeting.participantCount}`;
   byId('meeting-duration').textContent = `时长：${durationText(meeting.duration)}`;
-  byId('meeting-timezone').textContent = '时区：中国标准时间（GMT+8）';
+  byId('meeting-timezone').textContent = `时区：${timeZoneText()}`;
   byId('participant-total').textContent = `${meeting.participantCount} 人已回应`;
   byId('vote-list').innerHTML = meeting.slots.map(slot => {
     const parts = slotParts(slot.start);

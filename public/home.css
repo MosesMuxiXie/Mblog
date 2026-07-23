@@ -1,0 +1,106 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #0d1115;
+}
+
+.landing {
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: clamp(2rem, 6vw, 4rem);
+  padding: 2rem;
+  overflow: hidden;
+  color: #fff;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 10, 0.2), rgba(5, 8, 10, 0.62)),
+    url("/img/m48a5_patton_cn.jpg") center / cover no-repeat;
+}
+
+.landing::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 12%, rgba(0, 0, 0, 0.22) 100%);
+  pointer-events: none;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(3rem, 11vw, 8.5rem);
+  font-weight: 750;
+  line-height: 0.9;
+  letter-spacing: clamp(0.08em, 1.5vw, 0.2em);
+  text-indent: clamp(0.08em, 1.5vw, 0.2em);
+  text-shadow: 0 5px 30px rgba(0, 0, 0, 0.7);
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+}
+
+nav a {
+  min-width: 9.5rem;
+  padding: 0.85rem 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(10, 14, 17, 0.38);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-decoration: none;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+nav a:hover {
+  color: #14191d;
+  background: #fff;
+  transform: translateY(-2px);
+}
+
+nav a:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+
+@media (max-width: 480px) {
+  nav {
+    width: min(100%, 19rem);
+    flex-direction: column;
+  }
+
+  nav a {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nav a {
+    transition: none;
+  }
+}

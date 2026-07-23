@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { createMeeting, getMeeting, saveParticipant } = require('./lib/meetingStore');
+const { normalizeMeetingSlots, validTimeZone } = require('./lib/meetingTime');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,23 +36,27 @@ function publicMeeting(meeting) {
 
 app.get('/findatime', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'index.html')));
 app.get('/findatime/uuid/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'index.html')));
+app.get('/blog', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
 
 app.post('/api/findatime', async (req, res) => {
   try {
     const title = String(req.body.title || '').trim().slice(0, 80);
     const duration = Number(req.body.duration);
-    const slots = [...new Set(Array.isArray(req.body.slots) ? req.body.slots.map(String) : [])].sort();
+    const submittedTimeZone = req.body.timezone;
+    const timezone = submittedTimeZone == null ? 'Asia/Shanghai' : String(submittedTimeZone);
+    const slots = normalizeMeetingSlots(req.body.slots, submittedTimeZone == null);
     if (!title) return res.status(400).json({ error: '请输入约会名称' });
     if (!Number.isInteger(duration) || duration < 30 || duration > 480 || duration % 30 !== 0) {
       return res.status(400).json({ error: '无效时长' });
     }
-    if (!slots.length || slots.length > 10 || slots.some(value => !/^\d{4}-\d{2}-\d{2}T\d{2}:(00|30)$/.test(value))) {
+    if (!validTimeZone(timezone)) return res.status(400).json({ error: '浏览器时区无效' });
+    if (!slots || !slots.length || slots.length > 10) {
       return res.status(400).json({ error: '无效时间选项' });
     }
     const id = `ua${crypto.randomBytes(7).toString('hex')}`;
     const creatorToken = crypto.randomBytes(18).toString('base64url');
-    const meetingSlots = slots.map((start, index) => ({ id: `t${index + 1}`, start: `${start}:00+08:00` }));
-    const meeting = { id, title, duration, timezone: 'Asia/Shanghai', createdAt: new Date().toISOString(), slots: meetingSlots };
+    const meetingSlots = slots.map((start, index) => ({ id: `t${index + 1}`, start }));
+    const meeting = { id, title, duration, timezone, createdAt: new Date().toISOString(), slots: meetingSlots };
     await createMeeting(meeting, {
       token: creatorToken,
       name: '创建者',
