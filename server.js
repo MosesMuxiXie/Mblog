@@ -1,3 +1,11 @@
+if (process.env.FINDATIME_SKIP_ENV_FILE !== 'true' && typeof process.loadEnvFile === 'function') {
+  try {
+    process.loadEnvFile('.env.local');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+}
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
@@ -36,7 +44,14 @@ function publicMeeting(meeting) {
 
 app.get('/findatime', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'index.html')));
 app.get('/findatime/uuid/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'index.html')));
+app.get('/findatime/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'admin', 'index.html')));
 app.get('/blog', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
+
+app.all('/api/findatime/visit', require('./api/findatime/visit'));
+app.all('/api/findatime/admin/auth', require('./api/findatime/admin/auth'));
+app.all('/api/findatime/admin/setup', require('./api/findatime/admin/setup'));
+app.all('/api/findatime/admin/dashboard', require('./api/findatime/admin/dashboard'));
+app.all('/api/findatime/admin/password', require('./api/findatime/admin/password'));
 
 app.post('/api/findatime', async (req, res) => {
   try {

@@ -5,4 +5,5 @@
 .vercel/
 node_modules/
 findatime-meetings.json
+findatime-admin.json
 npm-debug.log*

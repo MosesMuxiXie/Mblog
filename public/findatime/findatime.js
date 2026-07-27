@@ -2,6 +2,23 @@ const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC
 const state = { duration: 60, slots: [], meeting: null, timezone: browserTimeZone };
 const byId = id => document.getElementById(id);
 
+function trackVisit() {
+  const storageKey = 'findatime-visitor-id';
+  let visitorId = localStorage.getItem(storageKey);
+  if (!visitorId) {
+    visitorId = typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(storageKey, visitorId);
+  }
+  fetch('/api/findatime/visit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ visitorId }),
+    keepalive: true
+  }).catch(() => {});
+}
+
 function escapeText(value) {
   const node = document.createElement('span');
   node.textContent = value;
@@ -286,5 +303,6 @@ async function setupMeeting(id) {
 }
 
 const match = window.location.pathname.match(/^\/findatime\/uuid\/(ua[a-f0-9]{14})\/?$/);
+trackVisit();
 if (match) setupMeeting(match[1]);
 else setupCreator();

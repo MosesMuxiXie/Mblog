@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="findatime 数据管理后台">
+  <meta name="robots" content="noindex,nofollow">
+  <title>findatime · 数据后台</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/findatime/admin/admin.css">
+</head>
+<body>
+  <div id="ambient-background" class="ambient-background" aria-hidden="true"></div>
+  <div id="background-shade" class="background-shade" aria-hidden="true"></div>
+
+  <main>
+    <section id="setup-view" class="auth-shell hidden" aria-labelledby="setup-title">
+      <div class="auth-card">
+        <div class="auth-visual">
+          <a class="brand" href="/findatime">finda<span>time</span></a>
+          <div class="auth-visual-copy">
+            <p class="eyebrow">PRIVATE DATA SPACE</p>
+            <h2>让每一次预约<br>都清晰可见。</h2>
+            <p>会议、访问与参与趋势集中在一个安全的管理空间。</p>
+          </div>
+          <div class="auth-status"><i></i> 服务端安全存储</div>
+        </div>
+        <div class="auth-form-panel">
+          <p class="eyebrow">FIRST-TIME SETUP</p>
+          <h1 id="setup-title">创建管理员</h1>
+          <p class="intro">首次使用需要创建管理员。密码只会以加盐哈希形式保存在服务器。</p>
+          <form id="setup-form">
+            <label for="setup-token">初始化口令</label>
+            <input id="setup-token" type="password" autocomplete="one-time-code" required>
+            <p class="field-note">使用服务器环境中配置的一次性口令。</p>
+            <label for="setup-username">管理员账号</label>
+            <input id="setup-username" type="text" autocomplete="username" minlength="3" maxlength="40" required>
+            <label for="setup-password">管理员密码</label>
+            <input id="setup-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+            <label for="setup-confirm-password">确认密码</label>
+            <input id="setup-confirm-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+            <p id="setup-error" class="form-message error" role="alert"></p>
+            <button class="primary-button" type="submit">创建并进入后台 <span>→</span></button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="login-view" class="auth-shell hidden" aria-labelledby="login-title">
+      <div class="auth-card">
+        <div class="auth-visual">
+          <a class="brand" href="/findatime">finda<span>time</span></a>
+          <div class="auth-visual-copy">
+            <p class="eyebrow">ADMIN CONSOLE</p>
+            <h2>数据有迹可循，<br>决策更从容。</h2>
+            <p>实时掌握预约创建、用户访问和会议参与情况。</p>
+          </div>
+          <div class="auth-status"><i></i> 管理后台已受保护</div>
+        </div>
+        <div class="auth-form-panel">
+          <p class="eyebrow">WELCOME BACK</p>
+          <h1 id="login-title">登录后台</h1>
+          <p class="intro">输入管理员账号和密码，继续查看 findatime 数据。</p>
+          <form id="login-form">
+            <label for="username">账号</label>
+            <input id="username" name="username" type="text" autocomplete="username" required>
+            <label for="password">密码</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+            <p id="login-error" class="form-message error" role="alert"></p>
+            <button class="primary-button" type="submit">进入数据后台 <span>→</span></button>
+          </form>
+          <a class="back-link" href="/findatime">← 返回 findatime</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="dashboard-view" class="dashboard hidden">
+      <button id="sidebar-scrim" class="sidebar-scrim" type="button" aria-label="关闭导航"></button>
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-brand">
+          <a class="brand" href="/findatime">finda<span>time</span></a>
+          <span>ADMIN</span>
+        </div>
+        <nav aria-label="后台导航">
+          <p class="nav-label">WORKSPACE</p>
+          <a class="nav-item active" href="#overview"><span>◈</span> 数据概览</a>
+          <a class="nav-item" href="#breakdown"><span>▦</span> 会议数据</a>
+          <a class="nav-item" href="#trend"><span>⌁</span> 趋势分析</a>
+          <p class="nav-label">SYSTEM</p>
+          <button class="nav-item" type="button" data-open-appearance><span>✦</span> 外观设置</button>
+          <button class="nav-item" type="button" data-open-security><span>◇</span> 账户安全</button>
+        </nav>
+        <div class="sidebar-account">
+          <div class="account-avatar" id="account-avatar">A</div>
+          <div>
+            <strong id="account-name">管理员</strong>
+            <span><i></i> 已安全登录</span>
+          </div>
+          <button id="logout-button" type="button" title="退出登录" aria-label="退出登录">↗</button>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menu-button" class="icon-button mobile-menu" type="button" aria-label="打开导航">☰</button>
+            <div>
+              <span class="topbar-kicker">FINDATIME / ADMIN</span>
+              <strong>数据控制台</strong>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <span class="live-status"><i></i> 数据在线</span>
+            <a class="toolbar-button" href="/">⌂ <span>返回主站</span></a>
+            <button id="refresh-button" class="toolbar-button" type="button">↻ <span>刷新</span></button>
+            <button class="toolbar-button" type="button" data-open-appearance>✦ <span>外观</span></button>
+            <button class="toolbar-button" type="button" data-open-security>◇ <span>安全</span></button>
+          </div>
+        </header>
+
+        <div class="dashboard-content">
+          <section id="overview" class="overview-section">
+            <div class="title-row">
+              <div>
+                <p class="eyebrow">PERFORMANCE OVERVIEW</p>
+                <h1>预约数据概览</h1>
+                <p id="updated-at" class="updated-at">正在读取最新数据…</p>
+              </div>
+              <div class="timezone-card">
+                <span>统计时区</span>
+                <strong>Asia / Shanghai</strong>
+              </div>
+            </div>
+            <div id="summary-cards" class="summary-cards" aria-live="polite"></div>
+          </section>
+
+          <section id="breakdown" class="panel" aria-labelledby="meeting-table-title">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">MEETING RECORDS</p>
+                <h2 id="meeting-table-title">会议数据</h2>
+              </div>
+              <p>全部会议按创建时间从新到旧排列，点击 UUID 可打开会议页面。</p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>UUID</th>
+                    <th>创建时间</th>
+                    <th>参与人数</th>
+                    <th>会议标题</th>
+                  </tr>
+                </thead>
+                <tbody id="meeting-table-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="trend" class="panel chart-panel" aria-labelledby="chart-title">
+            <div class="panel-heading chart-heading">
+              <div>
+                <p class="eyebrow">ALL-TIME TREND</p>
+                <h2 id="chart-title">全部数据趋势</h2>
+              </div>
+              <div class="legend" aria-label="图表图例">
+                <span><i class="dot meetings"></i>会议</span>
+                <span><i class="dot visitors"></i>访问用户</span>
+                <span><i class="dot participants"></i>参与人数</span>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="trend-chart" role="img" aria-label="全部数据按日趋势折线图"></canvas>
+              <div id="chart-empty" class="chart-empty hidden">暂无可显示的数据</div>
+            </div>
+          </section>
+
+          <footer class="dashboard-footer">
+            <span>findatime data console</span>
+            <span>数据仅对管理员可见</span>
+          </footer>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="security-dialog">
+    <form id="password-form" method="dialog" class="dialog-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">ACCOUNT SECURITY</p>
+          <h2>修改登录密码</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="security-dialog" aria-label="关闭">×</button>
+      </div>
+      <p class="dialog-intro">保存后其他设备上的旧登录会话会立即失效。</p>
+      <label for="current-password">当前密码</label>
+      <input id="current-password" type="password" autocomplete="current-password" required>
+      <label for="new-password">新密码</label>
+      <input id="new-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+      <label for="confirm-password">确认新密码</label>
+      <input id="confirm-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+      <p class="field-note">至少 10 个字符，建议混合字母、数字和符号。</p>
+      <p id="password-message" class="form-message" role="status"></p>
+      <button class="primary-button" type="submit">保存新密码</button>
+    </form>
+  </dialog>
+
+  <dialog id="appearance-dialog">
+    <form id="appearance-form" method="dialog" class="dialog-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">APPEARANCE</p>
+          <h2>自定义后台背景</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="appearance-dialog" aria-label="关闭">×</button>
+      </div>
+      <p class="dialog-intro">可使用网络图片或上传本地图片。设置仅保存在当前浏览器。</p>
+      <label for="background-url">背景图片地址</label>
+      <div class="input-action-row">
+        <input id="background-url" type="url" placeholder="https://example.com/background.jpg">
+        <button id="preview-background" class="secondary-button" type="button">预览</button>
+      </div>
+      <div class="upload-field">
+        <label for="background-file">上传本地图片</label>
+        <input id="background-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <span>支持 JPG、PNG、WebP、GIF，建议小于 2.5 MB。</span>
+      </div>
+      <div class="range-field">
+        <div>
+          <label for="shade-strength">暗色遮罩</label>
+          <output id="shade-output" for="shade-strength">72%</output>
+        </div>
+        <input id="shade-strength" type="range" min="35" max="90" step="1" value="72">
+      </div>
+      <div class="range-field">
+        <div>
+          <label for="text-opacity">文字透明度</label>
+          <output id="text-opacity-output" for="text-opacity">100%</output>
+        </div>
+        <input id="text-opacity" type="range" min="55" max="100" step="1" value="100">
+      </div>
+      <p id="appearance-message" class="form-message" role="status"></p>
+      <div class="dialog-actions">
+        <button id="reset-background" class="secondary-button danger-text" type="button">恢复默认</button>
+        <button class="primary-button compact" type="submit">保存外观</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/findatime/admin/admin.js" defer></script>
+</body>
+</html>
