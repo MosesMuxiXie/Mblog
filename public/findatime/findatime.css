@@ -169,7 +169,12 @@ input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgb
   border-radius: 14px;
   background: #fff;
 }
-.slot-date { min-width: 74px; color: var(--red); font: 700 1rem Georgia, "Noto Serif SC", serif; }
+.slot-date {
+  min-width: 140px;
+  color: var(--red);
+  font: 700 1rem Georgia, "Noto Serif SC", serif;
+  white-space: nowrap;
+}
 .slot-time { flex: 1; font-weight: 700; }
 .slot-remove { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #f5eee8; color: var(--red); }
 .empty-state { padding: 24px; border: 1px dashed var(--line); border-radius: 14px; color: var(--muted); text-align: center; }
@@ -195,7 +200,7 @@ input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgb
 .vote-slot { position: relative; cursor: pointer; align-items: flex-start; }
 .vote-slot input { width: 21px; height: 21px; accent-color: var(--teal); }
 .vote-slot:has(input:checked) { border-color: var(--teal); background: #f2faf7; }
-.vote-slot-main { flex: 1; display: grid; grid-template-columns: 88px 1fr; gap: 8px; align-items: center; }
+.vote-slot-main { flex: 1; display: grid; grid-template-columns: minmax(140px, auto) 1fr; gap: 8px; align-items: center; }
 .vote-details { min-width: 160px; display: grid; gap: 4px; text-align: right; }
 .vote-count { color: var(--teal); font-weight: 800; }
 .attendee-names { color: var(--muted); font-size: .78rem; line-height: 1.4; }
@@ -240,7 +245,16 @@ input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgb
   .actions .button { flex: 1; }
   .copy-row { flex-direction: column; }
   .summary > div { grid-template-columns: 1fr; gap: 0; }
+  .slot-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+  }
+  .slot-row .slot-date { min-width: 0; }
+  .slot-row .slot-time { grid-column: 1; }
+  .slot-row .slot-remove { grid-column: 2; grid-row: 1 / 3; align-self: center; }
   .vote-slot { flex-wrap: wrap; }
-  .vote-slot-main { min-width: calc(100% - 40px); }
+  .vote-slot-main { min-width: calc(100% - 40px); grid-template-columns: 1fr; gap: 4px; }
+  .vote-slot-main .slot-date { min-width: 0; }
   .vote-details { width: 100%; padding-left: 35px; text-align: left; }
 }

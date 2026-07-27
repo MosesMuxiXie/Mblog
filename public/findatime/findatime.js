@@ -46,34 +46,46 @@ function timeZoneText() {
   return offset && offset !== zoneName ? `${zoneName}（${offset}）` : zoneName;
 }
 
-function timeText(value, includeYear = false) {
-  const date = new Date(value);
-  return new Intl.DateTimeFormat('zh-CN', {
+function dateText(value, includeYear = false) {
+  const date = value instanceof Date ? value : new Date(value);
+  const datePart = new Intl.DateTimeFormat('zh-CN', {
     timeZone: state.timezone,
     ...(includeYear ? { year: 'numeric' } : {}),
     month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
+    day: 'numeric'
   }).format(date);
+  const weekday = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: state.timezone,
+    weekday: 'long'
+  }).format(date);
+  return `${datePart} ${weekday}`;
 }
 
-function slotParts(value) {
-  const date = new Date(value);
+function clockText(value) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: state.timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).format(value);
+}
+
+function slotParts(value, duration = state.duration, includeYear = false) {
+  const start = new Date(value);
+  const end = new Date(start.getTime() + duration * 60 * 1000);
+  const startDate = dateText(start, includeYear);
+  const endDate = dateText(end, includeYear);
   return {
-    date: new Intl.DateTimeFormat('zh-CN', {
-      timeZone: state.timezone,
-      month: 'long',
-      day: 'numeric'
-    }).format(date),
-    time: new Intl.DateTimeFormat('zh-CN', {
-      timeZone: state.timezone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23'
-    }).format(date)
+    date: startDate,
+    time: startDate === endDate
+      ? `${clockText(start)}—${clockText(end)}`
+      : `${clockText(start)}—${endDate} ${clockText(end)}`
   };
+}
+
+function timeText(value, duration = state.duration, includeYear = false) {
+  const parts = slotParts(value, duration, includeYear);
+  return `${parts.date} ${parts.time}`;
 }
 
 function setError(message, target = 'step-two-error') {
@@ -89,18 +101,21 @@ function renderDurationOptions() {
     </label>
   `).join('');
   document.querySelectorAll('input[name="duration"]').forEach(input => {
-    input.addEventListener('change', event => { state.duration = Number(event.target.value); });
+    input.addEventListener('change', event => {
+      state.duration = Number(event.target.value);
+      renderSlots();
+    });
   });
 }
 
 function renderSlots() {
   byId('slot-count').textContent = `已选择 ${state.slots.length} / 10 个时间`;
   byId('slot-list').innerHTML = state.slots.length ? state.slots.map((value, index) => {
-    const parts = slotParts(value);
+    const parts = slotParts(value, state.duration);
     return `<div class="slot-row">
       <span class="slot-date">${parts.date}</span>
       <span class="slot-time">${parts.time}</span>
-      <button class="slot-remove" type="button" data-index="${index}" aria-label="移除 ${timeText(value)}">×</button>
+      <button class="slot-remove" type="button" data-index="${index}" aria-label="移除 ${timeText(value, state.duration)}">×</button>
     </div>`;
   }).join('') : '<div class="empty-state">还没有时间选项，先在上方添加一个。</div>';
   document.querySelectorAll('.slot-remove').forEach(button => {
@@ -194,7 +209,7 @@ function setupCreator() {
 function summaryValues(meeting) {
   const maxVotes = Math.max(...meeting.slots.map(slot => slot.votes));
   const best = meeting.slots.filter(slot => slot.votes === maxVotes);
-  const times = best.map(slot => timeText(slot.start)).join('、');
+  const times = best.map(slot => timeText(slot.start, meeting.duration)).join('、');
   return { maxVotes, times };
 }
 
@@ -209,7 +224,7 @@ function renderMeeting(meeting) {
   byId('meeting-timezone').textContent = `时区：${timeZoneText()}`;
   byId('participant-total').textContent = `${meeting.participantCount} 人已回应`;
   byId('vote-list').innerHTML = meeting.slots.map(slot => {
-    const parts = slotParts(slot.start);
+    const parts = slotParts(slot.start, meeting.duration);
     const attendeeText = slot.attendees?.length ? slot.attendees.map(escapeText).join('、') : '暂无人选择';
     return `<label class="vote-slot">
       <input type="checkbox" name="availability" value="${escapeText(slot.id)}">
