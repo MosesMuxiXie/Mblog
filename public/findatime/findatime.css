@@ -50,8 +50,25 @@ button { cursor: pointer; }
 }
 
 .brand span { color: var(--red); }
+.header-actions { display: flex; align-items: center; gap: 14px; }
 .home-link { color: var(--muted); text-decoration: none; font-size: .92rem; }
 .home-link:hover { color: var(--red); }
+.admin-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(217, 79, 61, .35);
+  border-radius: 999px;
+  color: var(--red);
+  background: rgba(217, 79, 61, .07);
+  text-decoration: none;
+  font-size: .67rem;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+.admin-link:hover { color: #fff; border-color: var(--red); background: var(--red); }
 
 .page-shell {
   width: min(880px, 92vw);
@@ -236,6 +253,8 @@ input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgb
 
 @media (max-width: 560px) {
   .site-header { height: 66px; }
+  .header-actions { gap: 9px; }
+  .home-link { font-size: .76rem; }
   .page-shell { width: min(94vw, 680px); }
   .card { padding: 25px 19px; border-radius: 22px; }
   .duration-grid { grid-template-columns: repeat(2, 1fr); }
@@ -257,4 +276,8 @@ input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgb
   .vote-slot-main { min-width: calc(100% - 40px); grid-template-columns: 1fr; gap: 4px; }
   .vote-slot-main .slot-date { min-width: 0; }
   .vote-details { width: 100%; padding-left: 35px; text-align: left; }
+}
+
+@media (max-width: 390px) {
+  .home-link { display: none; }
 }

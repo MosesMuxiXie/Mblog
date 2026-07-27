@@ -5,18 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="无需登录，快速收集大家方便的约会时间。">
   <title>findatime · 轻松约时间</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="/findatime/findatime.css">
 </head>
 <body>
   <header class="site-header">
     <a class="brand" href="/findatime">finda<span>time</span></a>
-    <a class="home-link" href="/">返回 mosankai.com</a>
+    <div class="header-actions">
+      <a class="home-link" href="/">返回 mosankai.com</a>
+      <a class="admin-link" href="/findatime/admin" aria-label="登录 findatime 管理后台">ADMIN</a>
+    </div>
   </header>
 
   <main class="page-shell">
     <section id="creator-view" class="card">
       <div class="eyebrow">无需登录 · <span id="creator-timezone">正在识别时区…</span></div>
-      <h1>找一个大家都方便的时间。</h1>
+      <h1>找一个大家都方便的时间</h1>
       <p class="lead">创建约会、分享链接，让每个人勾选可参加的时间。最多添加 10 个选项。</p>
 
       <div class="progress" aria-label="创建进度">
