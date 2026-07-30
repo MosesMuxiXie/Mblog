@@ -1,6 +1,37 @@
 const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-const state = { duration: 60, slots: [], meeting: null, timezone: browserTimeZone };
+const state = {
+  duration: 60,
+  slots: [],
+  meeting: null,
+  timezone: browserTimeZone,
+  creating: false,
+  submitting: false,
+  meetingMessageKey: 'loadingMeeting'
+};
 const byId = id => document.getElementById(id);
+const t = (key, parameters) => MosankaiI18n.t(`findatime.${key}`, parameters);
+
+const apiErrorKeys = {
+  '请输入约会名称': 'enterMeetingName',
+  '时长必须为 30 分钟到 8 小时，并以 30 分钟递增': 'invalidDuration',
+  '无效时长': 'invalidDuration',
+  '浏览器时区无效': 'invalidTimezone',
+  '请选择 1–10 个有效的整点或半点时间': 'invalidSlots',
+  '无效时间选项': 'invalidSlots',
+  '暂时无法创建约会，请稍后重试': 'createFailedRetry',
+  '找不到这个约会': 'meetingNotFound',
+  '暂时无法读取约会': 'loadFailed',
+  '请输入姓名': 'enterParticipantName',
+  '请至少选择一个方便的时间': 'chooseAvailability',
+  '暂时无法保存，请稍后重试': 'submitFailedRetry'
+};
+
+function responseError(message, fallbackKey) {
+  const translationKey = apiErrorKeys[message] || fallbackKey;
+  const error = new Error(t(translationKey));
+  error.translationKey = translationKey;
+  return error;
+}
 
 function trackVisit() {
   const storageKey = 'findatime-visitor-id';
@@ -26,9 +57,13 @@ function escapeText(value) {
 }
 
 function durationText(minutes) {
-  if (minutes < 60) return `${minutes} 分钟`;
-  if (minutes % 60 === 0) return `${minutes / 60} 小时`;
-  return `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分钟`;
+  if (minutes < 60) return t('minutes', { count: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (minutes % 60 === 0) return t(hours === 1 ? 'hour' : 'hours', { count: hours });
+  return t(hours === 1 ? 'hourMinutes' : 'hoursMinutes', {
+    hours,
+    minutes: minutes % 60
+  });
 }
 
 function localDateValue(date = new Date()) {
@@ -52,26 +87,28 @@ function localDateTimeToIso(dateValue, timeValue) {
 
 function timeZoneText() {
   const now = new Date();
-  const zoneName = new Intl.DateTimeFormat('zh-CN', {
+  const locale = MosankaiI18n.locale();
+  const zoneName = new Intl.DateTimeFormat(locale, {
     timeZone: state.timezone,
     timeZoneName: 'long'
   }).formatToParts(now).find(part => part.type === 'timeZoneName')?.value || state.timezone;
-  const offset = new Intl.DateTimeFormat('zh-CN', {
+  const offset = new Intl.DateTimeFormat(locale, {
     timeZone: state.timezone,
     timeZoneName: 'longOffset'
   }).formatToParts(now).find(part => part.type === 'timeZoneName')?.value;
-  return offset && offset !== zoneName ? `${zoneName}（${offset}）` : zoneName;
+  return offset && offset !== zoneName ? `${zoneName} (${offset})` : zoneName;
 }
 
 function dateText(value, includeYear = false) {
   const date = value instanceof Date ? value : new Date(value);
-  const datePart = new Intl.DateTimeFormat('zh-CN', {
+  const locale = MosankaiI18n.locale();
+  const datePart = new Intl.DateTimeFormat(locale, {
     timeZone: state.timezone,
     ...(includeYear ? { year: 'numeric' } : {}),
     month: 'long',
     day: 'numeric'
   }).format(date);
-  const weekday = new Intl.DateTimeFormat('zh-CN', {
+  const weekday = new Intl.DateTimeFormat(locale, {
     timeZone: state.timezone,
     weekday: 'long'
   }).format(date);
@@ -79,7 +116,7 @@ function dateText(value, includeYear = false) {
 }
 
 function clockText(value) {
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(MosankaiI18n.locale(), {
     timeZone: state.timezone,
     hour: '2-digit',
     minute: '2-digit',
@@ -105,9 +142,12 @@ function timeText(value, duration = state.duration, includeYear = false) {
   return `${parts.date} ${parts.time}`;
 }
 
-function setError(message, target = 'step-two-error') {
+function setError(message, target = 'step-two-error', translationKey = '') {
   const element = byId(target);
-  if (element) element.textContent = message || '';
+  if (!element) return;
+  element.textContent = message || '';
+  if (translationKey) element.dataset.findatimeKey = translationKey;
+  else delete element.dataset.findatimeKey;
 }
 
 function renderDurationOptions() {
@@ -126,15 +166,15 @@ function renderDurationOptions() {
 }
 
 function renderSlots() {
-  byId('slot-count').textContent = `已选择 ${state.slots.length} / 10 个时间`;
+  byId('slot-count').textContent = t('selectedSlots', { count: state.slots.length });
   byId('slot-list').innerHTML = state.slots.length ? state.slots.map((value, index) => {
     const parts = slotParts(value, state.duration);
     return `<div class="slot-row">
       <span class="slot-date">${parts.date}</span>
       <span class="slot-time">${parts.time}</span>
-      <button class="slot-remove" type="button" data-index="${index}" aria-label="移除 ${timeText(value, state.duration)}">×</button>
+      <button class="slot-remove" type="button" data-index="${index}" aria-label="${t('removeTime', { time: timeText(value, state.duration) })}">×</button>
     </div>`;
-  }).join('') : '<div class="empty-state">还没有时间选项，先在上方添加一个。</div>';
+  }).join('') : `<div class="empty-state">${t('noSlots')}</div>`;
   document.querySelectorAll('.slot-remove').forEach(button => {
     button.addEventListener('click', () => {
       state.slots.splice(Number(button.dataset.index), 1);
@@ -156,7 +196,7 @@ function setupCreator() {
   renderDurationOptions();
   renderSlots();
 
-  byId('creator-timezone').textContent = `当前时区：${timeZoneText()}`;
+  byId('creator-timezone').textContent = t('currentTimezone', { timezone: timeZoneText() });
   const today = localDateValue();
   byId('slot-date').min = today;
   byId('slot-date').value = today;
@@ -168,7 +208,9 @@ function setupCreator() {
   }).join('');
 
   byId('next-step').addEventListener('click', () => {
-    if (!byId('meeting-title').value.trim()) return setError('请先填写约会名称', 'step-one-error');
+    if (!byId('meeting-title').value.trim()) {
+      return setError(t('enterMeetingName'), 'step-one-error', 'enterMeetingName');
+    }
     goToStep(2);
   });
   byId('back-step').addEventListener('click', () => goToStep(1));
@@ -176,21 +218,22 @@ function setupCreator() {
     setError('');
     const date = byId('slot-date').value;
     const time = byId('slot-time').value;
-    if (!date || !time) return setError('请选择日期和时间');
+    if (!date || !time) return setError(t('chooseDateTime'), 'step-two-error', 'chooseDateTime');
     const value = localDateTimeToIso(date, time);
-    if (!value) return setError('这个时间在当前时区不存在，请选择其他时间');
-    if (state.slots.includes(value)) return setError('这个时间已经添加过了');
-    if (state.slots.length >= 10) return setError('最多可以添加 10 个时间');
+    if (!value) return setError(t('invalidLocalTime'), 'step-two-error', 'invalidLocalTime');
+    if (state.slots.includes(value)) return setError(t('duplicateTime'), 'step-two-error', 'duplicateTime');
+    if (state.slots.length >= 10) return setError(t('maximumTimes'), 'step-two-error', 'maximumTimes');
     state.slots.push(value);
     state.slots.sort();
     renderSlots();
   });
 
   byId('create-meeting').addEventListener('click', async () => {
-    if (!state.slots.length) return setError('请至少添加一个时间');
+    if (!state.slots.length) return setError(t('addAtLeastOne'), 'step-two-error', 'addAtLeastOne');
     const button = byId('create-meeting');
+    state.creating = true;
     button.disabled = true;
-    button.textContent = '正在创建…';
+    button.textContent = t('creating');
     try {
       const response = await fetch('/api/findatime', {
         method: 'POST',
@@ -203,23 +246,25 @@ function setupCreator() {
         })
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '创建失败');
+      if (!response.ok) throw responseError(result.error, 'createFailed');
       localStorage.setItem(`findatime-token-${result.id}`, result.creatorToken);
       const fullUrl = `${window.location.origin}${result.url}`;
       byId('share-link').value = fullUrl;
       byId('view-meeting').href = result.url;
       byId('share-modal').classList.remove('hidden');
     } catch (error) {
-      setError(error.message || '创建失败，请稍后重试');
+      const errorKey = error.translationKey || 'createFailedRetry';
+      setError(t(errorKey), 'step-two-error', errorKey);
     } finally {
+      state.creating = false;
       button.disabled = false;
-      button.textContent = '创建并获取链接';
+      button.textContent = t('createAndGetLink');
     }
   });
 
   byId('copy-link').addEventListener('click', async () => {
     await navigator.clipboard.writeText(byId('share-link').value);
-    byId('copy-link').textContent = '已复制';
+    byId('copy-link').textContent = t('copied');
   });
 }
 
@@ -237,12 +282,17 @@ function renderMeeting(meeting) {
   byId('summary-option-count').textContent = meeting.slots.length;
   byId('summary-best-times').textContent = summary.times;
   byId('summary-attendance').textContent = `${summary.maxVotes}/${meeting.participantCount}`;
-  byId('meeting-duration').textContent = `时长：${durationText(meeting.duration)}`;
-  byId('meeting-timezone').textContent = `时区：${timeZoneText()}`;
-  byId('participant-total').textContent = `${meeting.participantCount} 人已回应`;
+  byId('meeting-duration').textContent = t('durationLabel', { duration: durationText(meeting.duration) });
+  byId('meeting-timezone').textContent = t('timezoneLabel', { timezone: timeZoneText() });
+  byId('participant-total').textContent = t(
+    meeting.participantCount === 1 ? 'onePersonResponded' : 'peopleResponded',
+    { count: meeting.participantCount }
+  );
   byId('vote-list').innerHTML = meeting.slots.map(slot => {
     const parts = slotParts(slot.start, meeting.duration);
-    const attendeeText = slot.attendees?.length ? slot.attendees.map(escapeText).join('、') : '暂无人选择';
+    const attendeeText = slot.attendees?.length
+      ? slot.attendees.map(escapeText).join(MosankaiI18n.language === 'zh-CN' ? '、' : ', ')
+      : t('noOne');
     return `<label class="vote-slot">
       <input type="checkbox" name="availability" value="${escapeText(slot.id)}">
       <span class="vote-slot-main">
@@ -250,8 +300,8 @@ function renderMeeting(meeting) {
         <span class="slot-time">${parts.time}</span>
       </span>
       <span class="vote-details">
-        <span class="vote-count">${slot.votes} 票</span>
-        <span class="attendee-names">选择者：${attendeeText}</span>
+        <span class="vote-count">${t(slot.votes === 1 ? 'oneVote' : 'votes', { count: slot.votes })}</span>
+        <span class="attendee-names">${t('selectedBy', { names: attendeeText })}</span>
       </span>
     </label>`;
   }).join('');
@@ -260,15 +310,18 @@ function renderMeeting(meeting) {
 async function setupMeeting(id) {
   byId('creator-view').classList.add('hidden');
   byId('meeting-view').classList.remove('hidden');
+  state.meetingMessageKey = 'loadingMeeting';
+  byId('meeting-loading').textContent = t(state.meetingMessageKey);
   try {
     const response = await fetch(`/api/findatime/${encodeURIComponent(id)}`);
     const meeting = await response.json();
-    if (!response.ok) throw new Error(meeting.error || '找不到这个约会');
+    if (!response.ok) throw responseError(meeting.error, 'meetingNotFound');
     byId('meeting-loading').classList.add('hidden');
     byId('meeting-content').classList.remove('hidden');
     renderMeeting(meeting);
   } catch (error) {
-    byId('meeting-loading').textContent = error.message || '加载失败';
+    state.meetingMessageKey = error.translationKey || 'loadFailed';
+    byId('meeting-loading').textContent = t(state.meetingMessageKey);
   }
 
   byId('vote-form').addEventListener('submit', async event => {
@@ -276,11 +329,12 @@ async function setupMeeting(id) {
     setError('', 'vote-error');
     const availability = [...document.querySelectorAll('input[name="availability"]:checked')].map(input => input.value);
     const name = byId('participant-name').value.trim();
-    if (!name) return setError('请输入姓名', 'vote-error');
-    if (!availability.length) return setError('请至少选择一个方便的时间', 'vote-error');
+    if (!name) return setError(t('enterParticipantName'), 'vote-error', 'enterParticipantName');
+    if (!availability.length) return setError(t('chooseAvailability'), 'vote-error', 'chooseAvailability');
     const submit = byId('submit-vote');
+    state.submitting = true;
     submit.disabled = true;
-    submit.textContent = '正在提交…';
+    submit.textContent = t('submitting');
     try {
       const tokenKey = `findatime-token-${id}`;
       const response = await fetch(`/api/findatime/${encodeURIComponent(id)}`, {
@@ -289,20 +343,38 @@ async function setupMeeting(id) {
         body: JSON.stringify({ name, availability, participantToken: localStorage.getItem(tokenKey) })
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '提交失败');
+      if (!response.ok) throw responseError(result.error, 'submitFailed');
       localStorage.setItem(tokenKey, result.participantToken);
       renderMeeting(result.meeting);
-      byId('vote-success').textContent = '已保存你的时间，汇总结果已更新。';
+      byId('vote-success').textContent = t('availabilitySaved');
+      byId('vote-success').dataset.findatimeKey = 'availabilitySaved';
     } catch (error) {
-      setError(error.message || '提交失败，请稍后重试', 'vote-error');
+      const errorKey = error.translationKey || 'submitFailedRetry';
+      setError(t(errorKey), 'vote-error', errorKey);
     } finally {
+      state.submitting = false;
       submit.disabled = false;
-      submit.textContent = '提交我的时间';
+      submit.textContent = t('submitAvailability');
     }
   });
 }
 
 const match = window.location.pathname.match(/^\/findatime\/uuid\/(ua[a-f0-9]{14})\/?$/);
+window.addEventListener('mosankai:languagechange', () => {
+  renderDurationOptions();
+  renderSlots();
+  byId('creator-timezone').textContent = t('currentTimezone', { timezone: timeZoneText() });
+  byId('create-meeting').textContent = t(state.creating ? 'creating' : 'createAndGetLink');
+  byId('submit-vote').textContent = t(state.submitting ? 'submitting' : 'submitAvailability');
+  if (!byId('meeting-loading').classList.contains('hidden')) {
+    byId('meeting-loading').textContent = t(state.meetingMessageKey);
+  }
+  document.querySelectorAll('[data-findatime-key]').forEach(element => {
+    element.textContent = t(element.dataset.findatimeKey);
+  });
+  if (state.meeting) renderMeeting(state.meeting);
+});
+
 trackVisit();
 if (match) setupMeeting(match[1]);
 else setupCreator();

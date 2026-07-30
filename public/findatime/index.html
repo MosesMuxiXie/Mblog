@@ -1,67 +1,72 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="无需登录，快速收集大家方便的约会时间。">
-  <title>findatime · 轻松约时间</title>
+  <meta name="description" content="Quickly collect everyone’s availability without requiring an account." data-i18n-content="findatime.description">
+  <title data-i18n="findatime.pageTitle">findatime · Schedule with ease</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="/findatime/findatime.css">
+  <link rel="stylesheet" href="/i18n.css">
+  <script src="/i18n.js"></script>
 </head>
 <body>
   <header class="site-header">
     <a class="brand" href="/findatime">finda<span>time</span></a>
     <div class="header-actions">
-      <a class="home-link" href="/">返回 mosankai.com</a>
-      <a class="admin-link" href="/findatime/admin" aria-label="登录 findatime 管理后台">ADMIN</a>
+      <a class="home-link" href="/" data-i18n="findatime.backHome">Back to mosankai.com</a>
+      <a class="admin-link" href="/findatime/admin" aria-label="Sign in to the findatime admin console" data-i18n-aria-label="findatime.adminLabel">ADMIN</a>
     </div>
   </header>
 
   <main class="page-shell">
     <section id="creator-view" class="card">
-      <div class="eyebrow">无需登录 · <span id="creator-timezone">正在识别时区…</span></div>
-      <h1>找一个大家都方便的时间</h1>
-      <p class="lead">创建约会、分享链接，让每个人勾选可参加的时间。最多添加 10 个选项。</p>
+      <div class="eyebrow">
+        <span data-i18n="findatime.noLogin">No sign-in required ·</span>
+        <span id="creator-timezone">Detecting time zone…</span>
+      </div>
+      <h1 data-i18n="findatime.heroTitle">Find a time that works for everyone</h1>
+      <p class="lead" data-i18n="findatime.heroLead">Create a meeting, share the link, and let everyone select the times they can attend. Add up to 10 options.</p>
 
-      <div class="progress" aria-label="创建进度">
-        <span id="progress-one" class="active"><b>1</b> 选择时长</span><i></i>
-        <span id="progress-two"><b>2</b> 添加时间</span>
+      <div class="progress" aria-label="Creation progress" data-i18n-aria-label="findatime.createProgress">
+        <span id="progress-one" class="active"><b>1</b> <span data-i18n="findatime.chooseDuration">Choose duration</span></span><i></i>
+        <span id="progress-two"><b>2</b> <span data-i18n="findatime.addTimes">Add times</span></span>
       </div>
 
       <div id="step-one">
         <div class="field">
-          <label for="meeting-title">约会名称</label>
-          <input id="meeting-title" type="text" maxlength="80" placeholder="例如：项目启动会" autocomplete="off">
+          <label for="meeting-title" data-i18n="findatime.meetingName">Meeting name</label>
+          <input id="meeting-title" type="text" maxlength="80" placeholder="For example: Project kickoff" data-i18n-placeholder="findatime.meetingNameExample" autocomplete="off">
         </div>
         <fieldset class="field" style="border:0;padding:0">
-          <legend class="field-label">约会时长</legend>
+          <legend class="field-label" data-i18n="findatime.meetingDuration">Meeting duration</legend>
           <div id="duration-options" class="duration-grid"></div>
-          <span class="hint">从 30 分钟到 8 小时，每 30 分钟一个选项。</span>
+          <span class="hint" data-i18n="findatime.durationHint">Choose from 30 minutes to 8 hours in 30-minute increments.</span>
         </fieldset>
         <div id="step-one-error" class="error" role="alert"></div>
-        <div class="actions"><button id="next-step" class="button" type="button">下一步：选择时间</button></div>
+        <div class="actions"><button id="next-step" class="button" type="button" data-i18n="findatime.nextChooseTime">Next: choose times</button></div>
       </div>
 
       <div id="step-two" class="hidden">
         <div class="slot-adder">
-          <div class="field"><label for="slot-date">日期</label><input id="slot-date" type="date"></div>
-          <div class="field"><label for="slot-time">开始时间</label><select id="slot-time"></select></div>
-          <button id="add-slot" class="button small" type="button">添加时间</button>
+          <div class="field"><label for="slot-date" data-i18n="findatime.date">Date</label><input id="slot-date" type="date"></div>
+          <div class="field"><label for="slot-time" data-i18n="findatime.startTime">Start time</label><select id="slot-time"></select></div>
+          <button id="add-slot" class="button small" type="button" data-i18n="findatime.addTime">Add time</button>
         </div>
         <div id="slot-count" class="slot-count"></div>
         <div id="slot-list" class="slot-list"></div>
         <div id="step-two-error" class="error" role="alert"></div>
         <div class="actions">
-          <button id="back-step" class="button secondary" type="button">上一步</button>
-          <button id="create-meeting" class="button" type="button">创建并获取链接</button>
+          <button id="back-step" class="button secondary" type="button" data-i18n="findatime.previous">Previous</button>
+          <button id="create-meeting" class="button" type="button" data-i18n="findatime.createAndGetLink">Create and get link</button>
         </div>
       </div>
     </section>
 
     <section id="meeting-view" class="card hidden">
-      <div id="meeting-loading" class="loading">正在载入约会…</div>
+      <div id="meeting-loading" class="loading">Loading meeting…</div>
       <div id="meeting-content" class="hidden">
-        <div class="eyebrow">findatime · 投票</div>
+        <div class="eyebrow" data-i18n="findatime.voteEyebrow">findatime · Vote</div>
         <h1 id="meeting-title-view"></h1>
         <div class="meeting-meta">
           <span id="meeting-duration" class="pill"></span>
@@ -69,20 +74,20 @@
           <span id="participant-total" class="pill"></span>
         </div>
         <dl class="summary" aria-live="polite">
-          <div><dt>可供选择的时间段：</dt><dd id="summary-option-count"></dd></div>
-          <div><dt>最优会议时间：</dt><dd id="summary-best-times"></dd></div>
-          <div><dt>可参与人数：</dt><dd id="summary-attendance"></dd></div>
+          <div><dt data-i18n="findatime.availableOptions">Available time options:</dt><dd id="summary-option-count"></dd></div>
+          <div><dt data-i18n="findatime.bestMeetingTime">Best meeting time:</dt><dd id="summary-best-times"></dd></div>
+          <div><dt data-i18n="findatime.participants">Participants:</dt><dd id="summary-attendance"></dd></div>
         </dl>
         <form id="vote-form">
           <div class="field">
-            <label for="participant-name">你的姓名</label>
-            <input id="participant-name" type="text" maxlength="40" placeholder="输入姓名" autocomplete="name">
+            <label for="participant-name" data-i18n="findatime.yourName">Your name</label>
+            <input id="participant-name" type="text" maxlength="40" placeholder="Enter your name" data-i18n-placeholder="findatime.enterName" autocomplete="name">
           </div>
-          <div class="field-label">勾选你方便参加的时间</div>
+          <div class="field-label" data-i18n="findatime.selectAvailable">Select the times you can attend</div>
           <div id="vote-list" class="vote-list"></div>
           <div id="vote-error" class="error" role="alert"></div>
           <div id="vote-success" class="hint" aria-live="polite"></div>
-          <div class="actions"><button id="submit-vote" class="button" type="submit">提交我的时间</button></div>
+          <div class="actions"><button id="submit-vote" class="button" type="submit" data-i18n="findatime.submitAvailability">Submit my availability</button></div>
         </form>
       </div>
     </section>
@@ -90,14 +95,14 @@
 
   <div id="share-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="share-title">
     <div class="modal">
-      <div class="eyebrow">创建成功</div>
-      <h2 id="share-title">把链接发给大家</h2>
-      <p>任何人都可以直接打开链接并提交方便的时间，无需登录。</p>
+      <div class="eyebrow" data-i18n="findatime.created">Created</div>
+      <h2 id="share-title" data-i18n="findatime.shareTitle">Share the link with everyone</h2>
+      <p data-i18n="findatime.shareDescription">Anyone can open the link and submit their availability without signing in.</p>
       <div class="copy-row">
-        <input id="share-link" type="text" readonly aria-label="约会链接">
-        <button id="copy-link" class="button small" type="button">复制链接</button>
+        <input id="share-link" type="text" readonly aria-label="Meeting link" data-i18n-aria-label="findatime.meetingLink">
+        <button id="copy-link" class="button small" type="button" data-i18n="findatime.copyLink">Copy link</button>
       </div>
-      <div class="actions"><a id="view-meeting" class="button" href="#" style="display:inline-grid;place-items:center;text-decoration:none">查看汇总</a></div>
+      <div class="actions"><a id="view-meeting" class="button" href="#" style="display:inline-grid;place-items:center;text-decoration:none" data-i18n="findatime.viewSummary">View summary</a></div>
     </div>
   </div>
 
