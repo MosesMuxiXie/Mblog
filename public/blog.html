@@ -5,12 +5,12 @@
   <title>Blog | Mosankai</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="stylesheet" href="blog.css">
+  <link rel="stylesheet" href="/blog.css">
 </head>
 <body>
   <div class="container">
     <div class="sidebar">
-      <div class="hero" style="background-image:url('img/m48a5_patton_cn.jpg')">
+      <div class="hero" style="background-image:url('/img/m48a5_patton_cn.jpg')">
         <h1>tanks</h1>
         <p>Explore.<br>Shoot.<br>Write.</p>
         <div class="author">A tank lover's personal blog<br>By Moses Xie</div>
@@ -29,7 +29,7 @@
         <a href="#" onclick="alert('Subscribe feature coming soon!');return false;">SUBSCRIBE</a>
         <a href="#" onclick="alert('About section coming soon!');return false;">ABOUT</a>
         <a href="/findatime">FINDATIME</a>
-        <a href="admin.html" style="margin-left:auto;">ADMIN</a>
+        <a href="/blog/admin" style="margin-left:auto;">ADMIN</a>
       </nav>
       <div id="blog-list" class="blog-list"></div>
       <div id="blog-detail" style="display:none;max-width:700px;margin:2.2em auto;"></div>
@@ -39,61 +39,91 @@
     let blogs = [];
     let currentBlog = null;
 
+    function escapeHtml(value) {
+      const node = document.createElement('span');
+      node.textContent = String(value || '');
+      return node.innerHTML;
+    }
+
+    function safeImage(value) {
+      const fallback = '/img/default.jpg';
+      const candidate = String(value || '').trim();
+      if (!candidate) return fallback;
+      if (/^data:image\/(?:png|jpe?g|gif|webp);base64,[a-z0-9+/=]+$/i.test(candidate)) {
+        return candidate;
+      }
+      if (candidate.startsWith('/') && !candidate.startsWith('//')) return candidate;
+      try {
+        const parsed = new URL(candidate);
+        return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
     async function fetchBlogs() {
       const res = await fetch('/api/blogs');
+      if (!res.ok) throw new Error('Unable to load articles.');
       blogs = await res.json();
     }
 
     function renderBlogList() {
       const list = blogs.map(blog => `
-        <div class="blog-item" onclick="showBlog('${blog.id}')">
-          <img src="${blog.image || '/img/default.jpg'}" class="blog-thumb" alt="Blog image">
+        <article class="blog-item" data-blog-id="${encodeURIComponent(blog.slug || blog.id)}" tabindex="0">
+          <img src="${escapeHtml(safeImage(blog.image))}" class="blog-thumb" alt="">
           <div class="blog-meta">
-            <div class="blog-title">${blog.title}</div>
-            <div class="blog-excerpt">${blog.excerpt || ''}</div>
+            <div class="blog-title">${escapeHtml(blog.title)}</div>
+            <div class="blog-excerpt">${escapeHtml(blog.excerpt || '')}</div>
             <div class="blog-info">
-              ${blog.date} &nbsp;|&nbsp; ${blog.author || 'Anonymous'}
+              ${escapeHtml(blog.date)} &nbsp;|&nbsp; ${escapeHtml(blog.author || 'Anonymous')}
             </div>
             <div class="blog-tags">
-              ${(blog.tags||[]).map(tag => `<span class="blog-tag">${tag}</span>`).join(' ')}
+              ${(blog.tags||[]).map(tag => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join(' ')}
             </div>
           </div>
           <span class="blog-arrow">&rsaquo;</span>
-        </div>
+        </article>
       `).join('');
       document.getElementById('blog-list').innerHTML = list || "<p>No posts yet.</p>";
       document.getElementById('blog-list').style.display = '';
       document.getElementById('blog-detail').style.display = 'none';
     }
 
-    async function showList() {
+    async function showList(updateHistory = true) {
       await fetchBlogs();
       renderBlogList();
+      if (updateHistory && window.location.pathname !== '/blog') {
+        history.pushState({ view: 'list' }, '', '/blog');
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    async function showBlog(id) {
-      const res = await fetch('/api/blogs/' + id);
+    async function showBlog(id, updateHistory = true) {
+      const res = await fetch('/api/blogs/' + encodeURIComponent(id));
+      if (!res.ok) return;
       const blog = await res.json();
       currentBlog = blog;
+      const content = blog.contentFormat === 'html' && blog.contentHtml
+        ? blog.contentHtml
+        : escapeHtml(blog.content);
       document.getElementById('blog-detail').innerHTML = `
         <a href="#" onclick="showList();return false;" style="color:#1976d2;">&larr; Back to Articles</a>
-        <h2 style="margin-top:0.7em;color:#1976d2;">${blog.title}</h2>
+        <h2 style="margin-top:0.7em;color:#1976d2;">${escapeHtml(blog.title)}</h2>
         <div style="margin-bottom:1em;font-size:1.05em;color:#888;">
-          ${blog.date} &nbsp;|&nbsp; ${blog.author || 'Anonymous'}
+          ${escapeHtml(blog.date)} &nbsp;|&nbsp; ${escapeHtml(blog.author || 'Anonymous')}
         </div>
-        <img src="${blog.image}" style="width:100%;max-height:350px;object-fit:cover;border-radius:10px;margin-bottom:1.3em;">
-        <div style="font-size:1.11em;line-height:1.7;margin-bottom:1.9em;white-space:pre-line;">${blog.content}</div>
+        <img src="${escapeHtml(safeImage(blog.image))}" alt="" style="width:100%;max-height:350px;object-fit:cover;border-radius:10px;margin-bottom:1.3em;">
+        <div class="blog-content">${content}</div>
         <div style="margin-bottom:1.3em;">
-          ${(blog.tags||[]).map(tag => `<span class="blog-tag">${tag}</span>`).join(' ')}
+          ${(blog.tags||[]).map(tag => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join(' ')}
         </div>
         <div style="margin:2em 0 1em 0;">
           <h3 style="color:#1976d2;margin-bottom:0.5em;">Comments</h3>
           <div id="comments">
             ${(blog.comments||[]).map(c => `
               <div style="border-bottom:1px solid #eee;padding:0.5em 0;">
-                <b>${c.name}</b> <span style="color:#888;font-size:0.92em;">(${c.date})</span><br>
-                <div style="margin-top:0.2em;">${c.text.replace(/\n/g,'<br>')}</div>
+                <b>${escapeHtml(c.name)}</b> <span style="color:#888;font-size:0.92em;">(${escapeHtml(c.date)})</span><br>
+                <div style="margin-top:0.2em;white-space:pre-wrap;">${escapeHtml(c.text)}</div>
               </div>
             `).join('') || '<div style="color:#888;">No comments yet.</div>'}
           </div>
@@ -106,23 +136,59 @@
       `;
       document.getElementById('blog-list').style.display = 'none';
       document.getElementById('blog-detail').style.display = '';
+      if (updateHistory) {
+        history.pushState(
+          { view: 'detail', slug: blog.slug || blog.id },
+          '',
+          `/blog/${encodeURIComponent(blog.slug || blog.id)}`
+        );
+      }
       document.getElementById('comment-form').onsubmit = async function(e) {
         e.preventDefault();
         const name = document.getElementById('c-name').value.trim();
         const text = document.getElementById('c-text').value.trim();
         if (!name || !text) return;
-        await fetch('/api/blogs/' + blog.id + '/comments', {
+        const response = await fetch('/api/blogs/' + encodeURIComponent(blog.id) + '/comments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, text })
         });
-        showBlog(blog.id);
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          alert(result.error || 'Unable to post this comment.');
+          return;
+        }
+        showBlog(blog.slug || blog.id, false);
       };
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    window.showBlog = showBlog;
-    showList();
+    document.getElementById('blog-list').addEventListener('click', event => {
+      const item = event.target.closest('[data-blog-id]');
+      if (item) showBlog(decodeURIComponent(item.dataset.blogId));
+    });
+    document.getElementById('blog-list').addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const item = event.target.closest('[data-blog-id]');
+      if (item) {
+        event.preventDefault();
+        showBlog(decodeURIComponent(item.dataset.blogId));
+      }
+    });
+    window.showList = showList;
+    window.addEventListener('popstate', () => {
+      const slug = decodeURIComponent(window.location.pathname.replace(/^\/blog\/?/, ''));
+      if (slug) showBlog(slug, false);
+      else showList(false);
+    });
+
+    const initialSlug = decodeURIComponent(window.location.pathname.replace(/^\/blog\/?/, ''));
+    const initialView = initialSlug
+      ? showBlog(initialSlug, false)
+      : showList(false);
+    initialView.catch(error => {
+      document.getElementById('blog-list').innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+    });
   </script>
 </body>
 </html>

@@ -1,65 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>Admin - Post Blog</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="stylesheet" href="blog.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0;url=/blog/admin">
+  <title>正在前往管理员登录…</title>
 </head>
 <body>
-  <div class="container">
-    <div class="sidebar">
-      <div class="hero" style="background-image:url('img/m48a5_patton_cn.jpg')">
-        <h1>TANKS</h1>
-        <p>Fight.<br>Shoot.<br>Write.</p>
-      </div>
-    </div>
-    <div class="main">
-      <nav>
-        <a href="index.html" style="color:#1976d2;">&larr; BACK TO ARTICLES</a>
-      </nav>
-      <div style="max-width:600px;margin:2em auto;">
-        <h2 style="color:#1976d2;margin-bottom:0.8em;">Post a New Blog</h2>
-        <form id="blogForm">
-          <input type="text" id="title" placeholder="Title" required style="width:100%;padding:0.8em;margin-bottom:1em;">
-          <input type="text" id="author" placeholder="Author (optional)" style="width:100%;padding:0.8em;margin-bottom:1em;">
-          <textarea id="excerpt" rows="2" placeholder="Excerpt/summary (optional)" style="width:100%;padding:0.8em;margin-bottom:1em;"></textarea>
-          <textarea id="content" rows="7" placeholder="Blog content..." required style="width:100%;padding:0.8em;margin-bottom:1em;"></textarea>
-          <input type="text" id="image" placeholder="Image URL (or leave blank)" style="width:100%;padding:0.8em;margin-bottom:1em;">
-          <input type="text" id="tags" placeholder="Tags (comma separated)" style="width:100%;padding:0.8em;margin-bottom:1em;">
-          <input type="password" id="password" placeholder="Admin password" required style="width:100%;padding:0.8em;margin-bottom:1em;">
-          <button type="submit" style="background:#1976d2;color:#fff;padding:0.7em 1.8em;border:none;border-radius:7px;font-size:1em;">Post Blog</button>
-          <div id="message" style="color:red;margin-top:1em;"></div>
-        </form>
-      </div>
-    </div>
-  </div>
-  <script>
-    document.getElementById('blogForm').onsubmit = async function(e) {
-      e.preventDefault();
-      const title = document.getElementById('title').value.trim();
-      const author = document.getElementById('author').value.trim();
-      const excerpt = document.getElementById('excerpt').value.trim();
-      const content = document.getElementById('content').value.trim();
-      const image = document.getElementById('image').value.trim();
-      const tags = document.getElementById('tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-      const password = document.getElementById('password').value;
-      const res = await fetch('/api/blogs', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ title, content, excerpt, image, tags, author, password })
-      });
-      const result = await res.json();
-      if (res.ok) {
-        document.getElementById('message').style.color = 'green';
-        document.getElementById('message').textContent = "Blog posted!";
-        document.getElementById('blogForm').reset();
-      } else {
-        document.getElementById('message').style.color = 'red';
-        document.getElementById('message').textContent = result.error || 'Error posting blog.';
-      }
-    };
-  </script>
+  <p>正在前往<a href="/blog/admin">博客管理员登录</a>…</p>
+  <script>window.location.replace('/blog/admin');</script>
 </body>
 </html>

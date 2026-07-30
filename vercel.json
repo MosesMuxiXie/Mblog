@@ -8,12 +8,41 @@
       },
       "api/blogs/[id]/comments.js": {
         "includeFiles": "blogs.json"
+      },
+      "api/blogs/admin/auth.js": {
+        "includeFiles": "blogs.json"
+      },
+      "api/blogs/admin/credentials.js": {
+        "includeFiles": "blogs.json"
       }
     },
+    "headers": [
+      {
+        "source": "/blog/admin",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-store" },
+          { "key": "X-Frame-Options", "value": "DENY" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "same-origin" }
+        ]
+      },
+      {
+        "source": "/blog/dashboard",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-store" },
+          { "key": "X-Frame-Options", "value": "DENY" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "same-origin" }
+        ]
+      }
+    ],
     "rewrites": [
+      { "source": "/blog/admin", "destination": "/blog-admin.html" },
+      { "source": "/blog/dashboard", "destination": "/blog-dashboard.html" },
+      { "source": "/blog/:slug", "destination": "/blog.html" },
       { "source": "/blog", "destination": "/blog.html" },
       { "source": "/findatime", "destination": "/findatime/index.html" },
       { "source": "/findatime/admin", "destination": "/findatime/admin/index.html" },
       { "source": "/findatime/uuid/:id", "destination": "/findatime/index.html" }
     ]
-  }
+}

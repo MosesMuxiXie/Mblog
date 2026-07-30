@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>博客后台 | Mosankai</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/blog-admin.css">
+</head>
+<body class="dashboard-page">
+  <div id="dashboard-loading" class="page-loading">
+    <span class="spinner"></span>
+    <span>正在验证管理员身份…</span>
+  </div>
+
+  <div id="dashboard-app" class="dashboard-shell hidden">
+    <aside class="dashboard-sidebar">
+      <a class="brand brand-light" href="/blog">
+        <span class="brand-mark">M</span>
+        <span>MOSANKAI / BLOG</span>
+      </a>
+
+      <nav class="side-nav" aria-label="后台导航">
+        <button class="side-nav-item active" type="button" data-panel="posts-panel">
+          <span>▤</span> 文章管理
+        </button>
+        <button class="side-nav-item" type="button" data-new-post>
+          <span>✦</span> 新建文章
+        </button>
+        <button class="side-nav-item" type="button" data-panel="account-panel">
+          <span>⌁</span> 账号安全
+        </button>
+        <a class="side-nav-item" href="/blog" target="_blank" rel="noopener">
+          <span>↗</span> 查看博客
+        </a>
+      </nav>
+
+      <div class="sidebar-account">
+        <span id="account-avatar" class="account-avatar">A</span>
+        <span>
+          <small>当前管理员</small>
+          <strong id="account-name">Admin</strong>
+        </span>
+        <button id="logout-button" class="icon-button light" type="button" title="退出登录">↪</button>
+      </div>
+    </aside>
+
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <button id="menu-button" class="icon-button mobile-menu" type="button"
+          aria-label="打开菜单">☰</button>
+        <div>
+          <span class="eyebrow ink">EDITORIAL DESK</span>
+          <h1 id="page-heading">文章管理</h1>
+        </div>
+        <span id="session-label" class="session-label">安全会话已启用</span>
+      </header>
+
+      <div id="default-password-warning" class="security-warning hidden">
+        <span>!</span>
+        <p><strong>你仍在使用初始密码。</strong> 为保护博客，请前往“账号安全”立即修改。</p>
+        <button type="button" data-open-account>现在修改</button>
+      </div>
+
+      <section id="posts-panel" class="dashboard-panel">
+        <div class="library-header">
+          <div>
+            <span class="eyebrow ink">PUBLISHED STORIES</span>
+            <h2>文章管理</h2>
+            <p>管理已经发布的内容，或进入独立写作台开始一篇新文章。</p>
+          </div>
+          <button class="primary-button" type="button" data-new-post>
+            新建文章 <span aria-hidden="true">↗</span>
+          </button>
+        </div>
+        <div id="post-list" class="post-library-grid" aria-live="polite">
+          <div class="empty-state">正在读取文章…</div>
+        </div>
+      </section>
+
+      <section id="editor-panel" class="dashboard-panel studio-panel hidden">
+        <form id="blog-form" class="studio-form">
+          <input id="editing-id" type="hidden">
+
+          <header class="studio-topbar">
+            <div class="studio-topbar-left">
+              <button id="close-editor-button" class="studio-icon-button dark" type="button"
+                title="返回文章管理">×</button>
+              <span class="studio-divider"></span>
+              <button class="studio-icon-button" type="button" data-command="undo" title="撤销">↶</button>
+              <button class="studio-icon-button" type="button" data-command="redo" title="重做">↷</button>
+              <button id="toggle-blocks-button" class="studio-icon-button" type="button"
+                title="显示或隐藏区块库">☷</button>
+            </div>
+            <div class="studio-document-state">
+              <strong id="studio-document-title">未命名文章</strong>
+              <small id="studio-save-state">新文章 · 尚未发布</small>
+            </div>
+            <div class="studio-topbar-actions">
+              <a id="view-post-button" class="studio-text-action hidden" href="/blog"
+                target="_blank" rel="noopener">查看文章</a>
+              <button id="toggle-settings-button" class="studio-icon-button" type="button"
+                title="文章设置">◧</button>
+              <button id="publish-button" class="studio-publish-button" type="submit">
+                发布
+              </button>
+            </div>
+          </header>
+
+          <div class="studio-workspace">
+            <aside id="block-library" class="block-library">
+              <div class="studio-tabs">
+                <button class="active" type="button">区块</button>
+                <span>插入内容</span>
+              </div>
+              <label class="block-search">
+                <span aria-hidden="true">⌕</span>
+                <input id="block-search-input" type="search" placeholder="搜索区块">
+              </label>
+              <p class="block-group-label">基础区块</p>
+              <div id="block-grid" class="block-grid">
+                <button type="button" data-block="paragraph"><span>¶</span>段落</button>
+                <button type="button" data-block="heading"><span>H</span>标题</button>
+                <button type="button" data-block="image"><span>▧</span>图片</button>
+                <button type="button" data-block="quote"><span>❝</span>引用</button>
+                <button type="button" data-block="unorderedList"><span>☷</span>列表</button>
+                <button type="button" data-block="orderedList"><span>1.</span>编号列表</button>
+                <button type="button" data-block="divider"><span>—</span>分隔线</button>
+                <button type="button" data-block="code"><span>&lt;/&gt;</span>代码</button>
+                <button type="button" data-block="link"><span>⌁</span>链接</button>
+              </div>
+              <div class="block-help">
+                <strong>图片支持</strong>
+                <p>可插入网络图片，或上传不超过 700 KB 的 JPG、PNG、GIF、WebP。</p>
+              </div>
+            </aside>
+
+            <section class="canvas-stage">
+              <div class="format-toolbar" aria-label="文字格式工具栏">
+                <select id="block-format" title="段落样式">
+                  <option value="p">正文</option>
+                  <option value="h1">标题 1</option>
+                  <option value="h2">标题 2</option>
+                  <option value="h3">标题 3</option>
+                  <option value="blockquote">引用</option>
+                  <option value="pre">代码块</option>
+                </select>
+                <select id="font-family" title="字体">
+                  <option value="">默认字体</option>
+                  <option value="Microsoft YaHei">微软雅黑</option>
+                  <option value="SimSun">宋体</option>
+                  <option value="KaiTi">楷体</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Courier New">Courier New</option>
+                </select>
+                <select id="font-size" title="字号">
+                  <option value="">字号</option>
+                  <option value="2">小</option>
+                  <option value="3">正文</option>
+                  <option value="4">中</option>
+                  <option value="5">大</option>
+                  <option value="6">特大</option>
+                </select>
+                <span class="toolbar-divider"></span>
+                <button type="button" data-command="bold" title="粗体"><strong>B</strong></button>
+                <button type="button" data-command="italic" title="斜体"><em>I</em></button>
+                <button type="button" data-command="underline" title="下划线"><u>U</u></button>
+                <button type="button" data-command="strikeThrough" title="删除线"><s>S</s></button>
+                <label class="color-tool" title="文字颜色">
+                  <span>A</span>
+                  <input id="text-color" type="color" value="#172b3a">
+                </label>
+                <span class="toolbar-divider"></span>
+                <button type="button" data-command="justifyLeft" title="左对齐">≡</button>
+                <button type="button" data-command="justifyCenter" title="居中">≣</button>
+                <button type="button" data-command="justifyRight" title="右对齐">☰</button>
+                <button type="button" data-command="insertUnorderedList" title="项目列表">•≡</button>
+                <button type="button" data-command="insertOrderedList" title="编号列表">1≡</button>
+                <button type="button" data-insert-link title="插入链接">⌁</button>
+                <button type="button" data-insert-image title="插入图片">▧</button>
+                <button type="button" data-command="removeFormat" title="清除格式">Tx</button>
+              </div>
+
+              <article class="writing-canvas">
+                <textarea id="title" class="canvas-title" rows="1" maxlength="120"
+                  required placeholder="添加标题"></textarea>
+                <p class="canvas-hint">在下方输入正文，或从左侧选择一个区块。</p>
+                <div id="content-editor" class="rich-editor" contenteditable="true"
+                  role="textbox" aria-multiline="true"
+                  data-placeholder="开始写作…"></div>
+              </article>
+            </section>
+
+            <aside id="post-settings" class="post-settings">
+              <div class="settings-heading">
+                <div>
+                  <strong>文章设置</strong>
+                  <small id="editing-status">草稿</small>
+                </div>
+                <button id="close-settings-button" type="button" aria-label="关闭文章设置">×</button>
+              </div>
+
+              <div class="settings-section">
+                <label>
+                  <span>文章后缀 *</span>
+                  <input id="slug" type="text" maxlength="80" required
+                    placeholder="my-first-post" autocapitalize="none" spellcheck="false">
+                </label>
+                <div class="permalink-preview">
+                  <span>永久链接</span>
+                  <code>mosankai.com/blog/<b id="slug-preview">…</b></code>
+                </div>
+              </div>
+
+              <div class="settings-section">
+                <label>
+                  <span>作者</span>
+                  <input id="author" type="text" maxlength="60" placeholder="Admin">
+                </label>
+              </div>
+
+              <details class="settings-section" open>
+                <summary>特色图片</summary>
+                <div class="featured-image-control">
+                  <div id="featured-image-preview" class="featured-image-preview empty">
+                    <img alt="特色图片预览">
+                    <span>尚未选择特色图片</span>
+                  </div>
+                  <input id="image" type="hidden">
+                  <input id="featured-image-file" type="file"
+                    accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+                  <div class="featured-image-actions">
+                    <label id="featured-image-button" for="featured-image-file">
+                      选择本地图片
+                    </label>
+                    <button id="remove-featured-image" class="hidden" type="button">移除</button>
+                  </div>
+                  <small>图片会在浏览器内自动缩放和压缩；支持 JPG、PNG、GIF、WebP。</small>
+                </div>
+              </details>
+
+              <details class="settings-section" open>
+                <summary>摘要</summary>
+                <label>
+                  <span>文章列表中的简短介绍</span>
+                  <textarea id="excerpt" rows="4" maxlength="400"
+                    placeholder="留空时可稍后补充"></textarea>
+                </label>
+              </details>
+
+              <details class="settings-section" open>
+                <summary>标签</summary>
+                <label>
+                  <span>使用逗号分隔</span>
+                  <input id="tags" type="text" maxlength="250"
+                    placeholder="随笔, 技术, 坦克">
+                </label>
+              </details>
+            </aside>
+          </div>
+
+          <input id="inline-image-file" type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+          <div id="editor-message" class="studio-message" role="alert" aria-live="polite"></div>
+        </form>
+      </section>
+
+      <section id="account-panel" class="dashboard-panel hidden">
+        <div class="account-layout">
+          <article class="account-intro">
+            <span class="eyebrow ink">ONE ADMIN ONLY</span>
+            <h2>唯一管理员账号</h2>
+            <p>本博客只保留一个管理员。修改账号或密码前，必须再次输入当前密码进行验证。</p>
+            <div class="security-points">
+              <p><span>01</span> 密码以加盐哈希保存，不记录明文。</p>
+              <p><span>02</span> 新登录或修改成功后，此前的登录会话会立即失效。</p>
+              <p><span>03</span> 后台发布接口仅接受有效管理员会话。</p>
+            </div>
+          </article>
+
+          <article class="account-card">
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow ink">CREDENTIALS</span>
+                <h2>修改登录信息</h2>
+              </div>
+            </div>
+            <form id="credentials-form" class="stack-form">
+              <label>
+                <span>新的管理员账号</span>
+                <input id="new-username" type="text" autocomplete="username"
+                  autocapitalize="none" spellcheck="false" minlength="3" maxlength="40" required>
+                <small>3–40 个字符，可使用字母、数字及 . _ @ -</small>
+              </label>
+              <label>
+                <span>当前密码 *</span>
+                <input id="current-password" type="password"
+                  autocomplete="current-password" maxlength="128" required>
+              </label>
+              <label>
+                <span>新密码</span>
+                <input id="new-password" type="password"
+                  autocomplete="new-password" minlength="6" maxlength="128"
+                  placeholder="不修改时请留空">
+              </label>
+              <label>
+                <span>确认新密码</span>
+                <input id="confirm-password" type="password"
+                  autocomplete="new-password" maxlength="128">
+              </label>
+              <div id="credentials-message" class="form-message" role="alert" aria-live="polite"></div>
+              <button class="primary-button" type="submit">
+                验证并保存 <span aria-hidden="true">↗</span>
+              </button>
+            </form>
+          </article>
+        </div>
+      </section>
+    </main>
+    <button id="sidebar-scrim" class="sidebar-scrim" type="button" aria-label="关闭菜单"></button>
+  </div>
+  <script src="/blog-dashboard.js" defer></script>
+</body>
+</html>

@@ -6,4 +6,5 @@
 node_modules/
 findatime-meetings.json
 findatime-admin.json
+blog-admin.json
 npm-debug.log*
