@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Quickly collect everyone’s availability without requiring an account." data-i18n-content="findatime.description">
+  <title data-i18n="findatime.pageTitle">findatime · Schedule with ease</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/findatime/findatime.css">
+  <link rel="stylesheet" href="/i18n.css">
+  <script src="/i18n.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/findatime">finda<span>time</span></a>
+    <div class="header-actions">
+      <a class="home-link" href="/" data-i18n="findatime.backHome">Back to mosankai.com</a>
+      <a class="admin-link" href="/findatime/admin" aria-label="Sign in to the findatime admin console" data-i18n-aria-label="findatime.adminLabel">ADMIN</a>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section id="creator-view" class="card">
+      <div class="eyebrow">
+        <span data-i18n="findatime.noLogin">No sign-in required ·</span>
+        <span id="creator-timezone">Detecting time zone…</span>
+      </div>
+      <h1 data-i18n="findatime.heroTitle">Find a time that works for everyone</h1>
+      <p class="lead" data-i18n="findatime.heroLead">Create a meeting, share the link, and let everyone select the times they can attend. Add up to 10 options.</p>
+
+      <div class="progress" aria-label="Creation progress" data-i18n-aria-label="findatime.createProgress">
+        <span id="progress-one" class="active"><b>1</b> <span data-i18n="findatime.chooseDuration">Choose duration</span></span><i></i>
+        <span id="progress-two"><b>2</b> <span data-i18n="findatime.addTimes">Add times</span></span>
+      </div>
+
+      <div id="step-one">
+        <div class="field">
+          <label for="meeting-title" data-i18n="findatime.meetingName">Meeting name</label>
+          <input id="meeting-title" type="text" maxlength="80" placeholder="For example: Project kickoff" data-i18n-placeholder="findatime.meetingNameExample" autocomplete="off">
+        </div>
+        <fieldset class="field" style="border:0;padding:0">
+          <legend class="field-label" data-i18n="findatime.meetingDuration">Meeting duration</legend>
+          <div id="duration-options" class="duration-grid"></div>
+          <span class="hint" data-i18n="findatime.durationHint">Choose from 30 minutes to 8 hours in 30-minute increments.</span>
+        </fieldset>
+        <div id="step-one-error" class="error" role="alert"></div>
+        <div class="actions"><button id="next-step" class="button" type="button" data-i18n="findatime.nextChooseTime">Next: choose times</button></div>
+      </div>
+
+      <div id="step-two" class="hidden">
+        <div class="slot-adder">
+          <div class="field"><label for="slot-date" data-i18n="findatime.date">Date</label><input id="slot-date" type="date"></div>
+          <div class="field"><label for="slot-time" data-i18n="findatime.startTime">Start time</label><select id="slot-time"></select></div>
+          <button id="add-slot" class="button small" type="button" data-i18n="findatime.addTime">Add time</button>
+        </div>
+        <div id="slot-count" class="slot-count"></div>
+        <div id="slot-list" class="slot-list"></div>
+        <div id="step-two-error" class="error" role="alert"></div>
+        <div class="actions">
+          <button id="back-step" class="button secondary" type="button" data-i18n="findatime.previous">Previous</button>
+          <button id="create-meeting" class="button" type="button" data-i18n="findatime.createAndGetLink">Create and get link</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="meeting-view" class="card hidden">
+      <div id="meeting-loading" class="loading">Loading meeting…</div>
+      <div id="meeting-content" class="hidden">
+        <div class="eyebrow" data-i18n="findatime.voteEyebrow">findatime · Vote</div>
+        <h1 id="meeting-title-view"></h1>
+        <div class="meeting-meta">
+          <span id="meeting-duration" class="pill"></span>
+          <span id="meeting-timezone" class="pill"></span>
+          <span id="participant-total" class="pill"></span>
+        </div>
+        <dl class="summary" aria-live="polite">
+          <div><dt data-i18n="findatime.availableOptions">Available time options:</dt><dd id="summary-option-count"></dd></div>
+          <div><dt data-i18n="findatime.bestMeetingTime">Best meeting time:</dt><dd id="summary-best-times"></dd></div>
+          <div><dt data-i18n="findatime.participants">Participants:</dt><dd id="summary-attendance"></dd></div>
+        </dl>
+        <form id="vote-form">
+          <div class="field">
+            <label for="participant-name" data-i18n="findatime.yourName">Your name</label>
+            <input id="participant-name" type="text" maxlength="40" placeholder="Enter your name" data-i18n-placeholder="findatime.enterName" autocomplete="name">
+          </div>
+          <div class="field-label" data-i18n="findatime.selectAvailable">Select the times you can attend</div>
+          <div id="vote-list" class="vote-list"></div>
+          <div id="vote-error" class="error" role="alert"></div>
+          <div id="vote-success" class="hint" aria-live="polite"></div>
+          <div class="actions"><button id="submit-vote" class="button" type="submit" data-i18n="findatime.submitAvailability">Submit my availability</button></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <div id="share-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="share-title">
+    <div class="modal">
+      <div class="eyebrow" data-i18n="findatime.created">Created</div>
+      <h2 id="share-title" data-i18n="findatime.shareTitle">Share the link with everyone</h2>
+      <p data-i18n="findatime.shareDescription">Anyone can open the link and submit their availability without signing in.</p>
+      <div class="copy-row">
+        <input id="share-link" type="text" readonly aria-label="Meeting link" data-i18n-aria-label="findatime.meetingLink">
+        <button id="copy-link" class="button small" type="button" data-i18n="findatime.copyLink">Copy link</button>
+      </div>
+      <div class="actions"><a id="view-meeting" class="button" href="#" style="display:inline-grid;place-items:center;text-decoration:none" data-i18n="findatime.viewSummary">View summary</a></div>
+    </div>
+  </div>
+
+  <script src="/findatime/findatime.js" defer></script>
+</body>
+</html>

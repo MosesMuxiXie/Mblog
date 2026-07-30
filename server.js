@@ -8,18 +8,24 @@ if (process.env.FINDATIME_SKIP_ENV_FILE !== 'true' && typeof process.loadEnvFile
 
 const express = require('express');
 const bodyParser = require('body-parser');
-const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { createMeeting, getMeeting, saveParticipant } = require('./lib/meetingStore');
 const { normalizeMeetingSlots, validTimeZone } = require('./lib/meetingTime');
+const { readSession: readBlogAdminSession } = require('./lib/blogAdminAuth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BLOGS_FILE = path.join(__dirname, 'blogs.json');
 
-app.use(bodyParser.json({ limit: '1mb' }));
+app.use(bodyParser.json({ limit: '3mb' }));
 app.use(express.static('public'));
+
+function setAdminPageHeaders(res) {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'same-origin');
+}
 
 function publicMeeting(meeting) {
   const participants = meeting.participants || [];
@@ -46,12 +52,35 @@ app.get('/findatime', (req, res) => res.sendFile(path.join(__dirname, 'public', 
 app.get('/findatime/uuid/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'index.html')));
 app.get('/findatime/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'admin', 'index.html')));
 app.get('/blog', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
+app.get('/blog/admin', (req, res) => {
+  setAdminPageHeaders(res);
+  return res.sendFile(path.join(__dirname, 'public', 'blog-admin.html'));
+});
+app.get('/blog/dashboard', async (req, res) => {
+  try {
+    if (!(await readBlogAdminSession(req))) return res.redirect('/blog/admin');
+    setAdminPageHeaders(res);
+    return res.sendFile(path.join(__dirname, 'public', 'blog-dashboard.html'));
+  } catch (error) {
+    console.error(error);
+    return res.redirect('/blog/admin');
+  }
+});
+app.get('/blog/:slug', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.sendFile(path.join(__dirname, 'public', 'blog.html'));
+});
 
 app.all('/api/findatime/visit', require('./api/findatime/visit'));
 app.all('/api/findatime/admin/auth', require('./api/findatime/admin/auth'));
 app.all('/api/findatime/admin/setup', require('./api/findatime/admin/setup'));
 app.all('/api/findatime/admin/dashboard', require('./api/findatime/admin/dashboard'));
 app.all('/api/findatime/admin/password', require('./api/findatime/admin/password'));
+app.all('/api/blogs/admin/auth', require('./api/blogs/admin/auth'));
+app.all('/api/blogs/admin/credentials', require('./api/blogs/admin/credentials'));
+app.all('/api/blogs', require('./api/blogs/index'));
+app.all('/api/blogs/:id/comments', require('./api/blogs/[id]/comments'));
+app.all('/api/blogs/:id', require('./api/blogs/[id]'));
 
 app.post('/api/findatime', async (req, res) => {
   try {
@@ -114,62 +143,6 @@ app.post('/api/findatime/:id', async (req, res) => {
     console.error(error);
     return res.status(500).json({ error: '暂时无法保存，请稍后重试' });
   }
-});
-
-// Helper functions
-function loadBlogs() {
-  if (!fs.existsSync(BLOGS_FILE)) return [];
-  try { return JSON.parse(fs.readFileSync(BLOGS_FILE, 'utf8')); }
-  catch { return []; }
-}
-function saveBlogs(blogs) {
-  fs.writeFileSync(BLOGS_FILE, JSON.stringify(blogs, null, 2), 'utf8');
-}
-
-// Get all blogs (most recent first)
-app.get('/api/blogs', (req, res) => {
-  const blogs = loadBlogs();
-  res.json(blogs.map(blog => ({
-    id: blog.id, title: blog.title, excerpt: blog.excerpt, image: blog.image,
-    date: blog.date, tags: blog.tags, author: blog.author
-  })));
-});
-
-// Get single blog with comments
-app.get('/api/blogs/:id', (req, res) => {
-  const blogs = loadBlogs();
-  const blog = blogs.find(b => b.id === req.params.id);
-  if (!blog) return res.status(404).json({ error: 'Not found' });
-  res.json(blog);
-});
-
-// Post a new blog (simple admin password)
-app.post('/api/blogs', (req, res) => {
-  const { title, content, excerpt, image, tags, author, password } = req.body;
-  if (password !== 'admin123') return res.status(401).json({ error: 'Unauthorized' });
-  if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
-  const blogs = loadBlogs();
-  const id = Date.now().toString();
-  blogs.unshift({
-    id, title, content, excerpt, image: image || '/img/default.jpg',
-    date: new Date().toISOString().slice(0,10),
-    tags: tags || [], author: author || 'Admin', comments: []
-  });
-  saveBlogs(blogs);
-  res.json({ success: true, id });
-});
-
-// Add comment to blog
-app.post('/api/blogs/:id/comments', (req, res) => {
-  const { name, text } = req.body;
-  if (!name || !text) return res.status(400).json({ error: 'Name and text required' });
-  const blogs = loadBlogs();
-  const blog = blogs.find(b => b.id === req.params.id);
-  if (!blog) return res.status(404).json({ error: 'Not found' });
-  blog.comments = blog.comments || [];
-  blog.comments.push({ name, text, date: new Date().toISOString().slice(0,10) });
-  saveBlogs(blogs);
-  res.json({ success: true });
 });
 
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
