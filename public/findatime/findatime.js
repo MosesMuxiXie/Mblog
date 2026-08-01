@@ -3,11 +3,16 @@ const state = {
   duration: 60,
   slots: [],
   meeting: null,
+  comments: [],
+  commentsLoading: false,
+  activeReplyId: null,
   timezone: browserTimeZone,
   creating: false,
   submitting: false,
+  commenting: false,
   creatorNameEdited: false,
-  meetingMessageKey: 'loadingMeeting'
+  meetingMessageKey: 'loadingMeeting',
+  commentsMessageKey: 'loadingComments'
 };
 const byId = id => document.getElementById(id);
 const t = (key, parameters) => MosankaiI18n.t(`findatime.${key}`, parameters);
@@ -32,7 +37,20 @@ function responseError(message, fallbackKey, code) {
   const translationKey = code || apiErrorKeys[message] || fallbackKey;
   const error = new Error(t(translationKey));
   error.translationKey = translationKey;
+  error.code = code || '';
   return error;
+}
+
+function participantTokenKey(id) {
+  return `findatime-token-${id}`;
+}
+
+function participantToken(id) {
+  return localStorage.getItem(participantTokenKey(id)) || '';
+}
+
+function participantNameKey(id) {
+  return `findatime-name-${id}`;
 }
 
 function loadProfile() {
@@ -317,7 +335,8 @@ function setupCreator() {
       const result = await response.json();
       if (!response.ok) throw responseError(result.error, 'createFailed', result.code);
       saveProfile(name);
-      localStorage.setItem(`findatime-token-${result.id}`, result.creatorToken);
+      localStorage.setItem(participantTokenKey(result.id), result.creatorToken);
+      localStorage.setItem(participantNameKey(result.id), name);
       const fullUrl = `${window.location.origin}${result.url}`;
       byId('share-link').value = fullUrl;
       byId('view-meeting').href = result.url;
@@ -404,10 +423,194 @@ function renderMeeting(meeting) {
   });
 }
 
+function commentDateText(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(MosankaiI18n.locale(), {
+    timeZone: state.timezone,
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function updateConversationAccess(id) {
+  const canComment = Boolean(participantToken(id));
+  byId('comment-gate').classList.toggle('hidden', canComment);
+  byId('comment-form').classList.toggle('hidden', !canComment);
+  if (canComment) {
+    const name = localStorage.getItem(participantNameKey(id)) || loadProfile() || byId('participant-name').value.trim();
+    byId('comment-author').textContent = t('commentingAs', { name });
+  } else {
+    byId('comment-author').textContent = '';
+  }
+  return canComment;
+}
+
+function renderComments(id) {
+  const comments = Array.isArray(state.comments) ? state.comments : [];
+  const canComment = Boolean(participantToken(id));
+  byId('comment-count').textContent = t(
+    comments.length === 1 ? 'oneComment' : 'commentsCount',
+    { count: comments.length }
+  );
+
+  const repliesByParent = new Map();
+  comments.filter(comment => comment.parentId).forEach(reply => {
+    if (!repliesByParent.has(reply.parentId)) repliesByParent.set(reply.parentId, []);
+    repliesByParent.get(reply.parentId).push(reply);
+  });
+
+  const replyMarkup = reply => `
+    <article class="reply" aria-label="${escapeText(t('replyFrom', { name: reply.name }))}">
+      <header class="comment-header">
+        <strong class="comment-name">${escapeText(reply.name)}</strong>
+        <time class="comment-time" datetime="${escapeText(reply.createdAt)}">${escapeText(commentDateText(reply.createdAt))}</time>
+      </header>
+      <p class="comment-text">${escapeText(reply.text)}</p>
+    </article>`;
+
+  const roots = comments.filter(comment => !comment.parentId);
+  byId('comments-list').innerHTML = roots.length ? roots.map(comment => {
+    const replies = repliesByParent.get(comment.id) || [];
+    const replyOpen = state.activeReplyId === comment.id;
+    const replyButton = canComment ? `
+      <button class="reply-toggle" type="button" data-reply-to="${escapeText(comment.id)}" aria-expanded="${replyOpen}">
+        ${escapeText(t(replyOpen ? 'cancelReply' : 'reply'))}
+      </button>` : '';
+    const repliesMarkup = replies.length
+      ? `<div class="replies">${replies.map(replyMarkup).join('')}</div>`
+      : '';
+    const replyForm = canComment && replyOpen ? `
+      <form class="reply-form" data-parent-id="${escapeText(comment.id)}" novalidate>
+        <label for="reply-text-${escapeText(comment.id)}">${escapeText(t('replyTo', { name: comment.name }))}</label>
+        <textarea id="reply-text-${escapeText(comment.id)}" maxlength="1000" rows="3" placeholder="${escapeText(t('replyPlaceholder'))}" required></textarea>
+        <div id="reply-error-${escapeText(comment.id)}" class="error" role="alert"></div>
+        <div class="comment-actions">
+          <button class="button small" type="submit">${escapeText(t('postReply'))}</button>
+        </div>
+      </form>` : '';
+
+    return `<article class="comment">
+      <header class="comment-header">
+        <strong class="comment-name">${escapeText(comment.name)}</strong>
+        <time class="comment-time" datetime="${escapeText(comment.createdAt)}">${escapeText(commentDateText(comment.createdAt))}</time>
+      </header>
+      <p class="comment-text">${escapeText(comment.text)}</p>
+      ${replyButton}
+      ${repliesMarkup}
+      ${replyForm}
+    </article>`;
+  }).join('') : `<div class="comments-empty">${escapeText(t('noComments'))}</div>`;
+}
+
+async function loadComments(id) {
+  state.commentsLoading = true;
+  state.commentsMessageKey = 'loadingComments';
+  byId('comments-loading').classList.remove('hidden');
+  byId('comments-loading').textContent = t(state.commentsMessageKey);
+  delete byId('comments-loading').dataset.findatimeKey;
+  try {
+    const response = await fetch(`/api/findatime/${encodeURIComponent(id)}?comments=1`);
+    const result = await response.json();
+    if (!response.ok) throw responseError(result.error, 'commentsLoadFailed', result.code);
+    state.comments = Array.isArray(result.comments) ? result.comments : [];
+    byId('comments-loading').classList.add('hidden');
+    renderComments(id);
+  } catch (error) {
+    state.commentsMessageKey = error.translationKey || 'commentsLoadFailed';
+    byId('comments-loading').textContent = t(state.commentsMessageKey);
+    byId('comments-loading').dataset.findatimeKey = state.commentsMessageKey;
+  } finally {
+    state.commentsLoading = false;
+  }
+}
+
+async function postComment(id, text, parentId, errorTarget, submitButton) {
+  setError('', errorTarget);
+  const trimmedText = text.trim();
+  if (!trimmedText) {
+    setError(t('writeCommentFirst'), errorTarget, 'writeCommentFirst');
+    return false;
+  }
+
+  submitButton.disabled = true;
+  submitButton.textContent = t('postingComment');
+  if (!parentId) state.commenting = true;
+  try {
+    const response = await fetch(`/api/findatime/${encodeURIComponent(id)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'comment',
+        text: trimmedText,
+        parentId: parentId || null,
+        participantToken: participantToken(id)
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw responseError(result.error, 'commentFailedRetry', result.code);
+    state.comments = Array.isArray(result.comments) ? result.comments : state.comments.concat(result.comment);
+    state.activeReplyId = null;
+    byId('comments-loading').classList.add('hidden');
+    byId('comment-success').textContent = t(parentId ? 'replyPosted' : 'commentPosted');
+    byId('comment-success').dataset.findatimeKey = parentId ? 'replyPosted' : 'commentPosted';
+    renderComments(id);
+    return true;
+  } catch (error) {
+    if (error.code === 'submitAvailabilityFirst') {
+      localStorage.removeItem(participantTokenKey(id));
+      localStorage.removeItem(participantNameKey(id));
+      updateConversationAccess(id);
+      renderComments(id);
+    } else {
+      const errorKey = error.translationKey || 'commentFailedRetry';
+      setError(t(errorKey), errorTarget, errorKey);
+    }
+    return false;
+  } finally {
+    if (!parentId) state.commenting = false;
+    submitButton.disabled = false;
+    submitButton.textContent = t(parentId ? 'postReply' : 'postComment');
+  }
+}
+
+function setupConversation(id) {
+  updateConversationAccess(id);
+
+  byId('comment-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const textarea = byId('comment-text');
+    const posted = await postComment(id, textarea.value, null, 'comment-error', byId('post-comment'));
+    if (posted) textarea.value = '';
+  });
+
+  byId('comments-list').addEventListener('click', event => {
+    const button = event.target.closest('[data-reply-to]');
+    if (!button) return;
+    const commentId = button.dataset.replyTo;
+    state.activeReplyId = state.activeReplyId === commentId ? null : commentId;
+    renderComments(id);
+    if (state.activeReplyId) requestAnimationFrame(() => byId(`reply-text-${commentId}`)?.focus());
+  });
+
+  byId('comments-list').addEventListener('submit', async event => {
+    const form = event.target.closest('.reply-form');
+    if (!form) return;
+    event.preventDefault();
+    const parentId = form.dataset.parentId;
+    const textarea = form.querySelector('textarea');
+    await postComment(id, textarea.value, parentId, `reply-error-${parentId}`, form.querySelector('button[type="submit"]'));
+  });
+}
+
 async function setupMeeting(id) {
   byId('creator-view').classList.add('hidden');
   byId('meeting-view').classList.remove('hidden');
   fillProfile('participant-name');
+  setupConversation(id);
   state.meetingMessageKey = 'loadingMeeting';
   byId('meeting-loading').textContent = t(state.meetingMessageKey);
   try {
@@ -417,6 +620,7 @@ async function setupMeeting(id) {
     byId('meeting-loading').classList.add('hidden');
     byId('meeting-content').classList.remove('hidden');
     renderMeeting(meeting);
+    loadComments(id);
   } catch (error) {
     state.meetingMessageKey = error.translationKey || 'loadFailed';
     byId('meeting-loading').textContent = t(state.meetingMessageKey);
@@ -435,7 +639,7 @@ async function setupMeeting(id) {
     submit.disabled = true;
     submit.textContent = t('submitting');
     try {
-      const tokenKey = `findatime-token-${id}`;
+      const tokenKey = participantTokenKey(id);
       const response = await fetch(`/api/findatime/${encodeURIComponent(id)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -450,7 +654,10 @@ async function setupMeeting(id) {
       if (!response.ok) throw responseError(result.error, 'submitFailed', result.code);
       saveProfile(name);
       localStorage.setItem(tokenKey, result.participantToken);
+      localStorage.setItem(participantNameKey(id), name);
       renderMeeting(result.meeting);
+      updateConversationAccess(id);
+      renderComments(id);
       byId('vote-success').textContent = t('availabilitySaved');
       byId('vote-success').dataset.findatimeKey = 'availabilitySaved';
     } catch (error) {
@@ -472,6 +679,7 @@ window.addEventListener('mosankai:languagechange', () => {
   byId('creator-timezone').textContent = t('currentTimezone', { timezone: timeZoneText() });
   byId('create-meeting').textContent = t(state.creating ? 'creating' : 'createAndGetLink');
   byId('submit-vote').textContent = t(state.submitting ? 'submitting' : 'submitAvailability');
+  byId('post-comment').textContent = t(state.commenting ? 'postingComment' : 'postComment');
   if (!byId('meeting-loading').classList.contains('hidden')) {
     byId('meeting-loading').textContent = t(state.meetingMessageKey);
   }
@@ -479,6 +687,11 @@ window.addEventListener('mosankai:languagechange', () => {
     element.textContent = t(element.dataset.findatimeKey);
   });
   if (state.meeting) renderMeeting(state.meeting);
+  if (match) {
+    updateConversationAccess(match[1]);
+    renderComments(match[1]);
+    if (state.commentsLoading) byId('comments-loading').textContent = t('loadingComments');
+  }
 });
 
 trackVisit();

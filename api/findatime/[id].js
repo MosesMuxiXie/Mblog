@@ -1,6 +1,71 @@
 const crypto = require('crypto');
-const { getMeeting, saveParticipant } = require('../../lib/meetingStore');
+const { getMeeting, getComments, saveComment, saveParticipant } = require('../../lib/meetingStore');
 const { normalizeName, publicMeeting } = require('../../lib/findatimeMeeting');
+
+function sendError(res, status, error, code) {
+  return res.status(status).json({ error, ...(code ? { code } : {}) });
+}
+
+function publicComment(comment) {
+  return {
+    id: comment.id,
+    parentId: comment.parentId || null,
+    name: comment.name,
+    text: comment.text,
+    createdAt: comment.createdAt
+  };
+}
+
+async function handleComments(req, res, meeting, id) {
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method === 'GET') {
+    const comments = await getComments(id);
+    return res.status(200).json({ comments: comments.map(publicComment) });
+  }
+  if (req.method !== 'POST') return sendError(res, 405, 'Method not allowed');
+
+  const participantToken = String(req.body?.participantToken || '');
+  const participant = (meeting.participants || []).find(person => person.token === participantToken);
+  if (!participant || !/^[A-Za-z0-9_-]{16,64}$/.test(participantToken)) {
+    return sendError(
+      res,
+      403,
+      'Submit your availability before joining the conversation.',
+      'submitAvailabilityFirst'
+    );
+  }
+
+  const text = String(req.body?.text || '').trim().slice(0, 1000);
+  if (!text) return sendError(res, 400, 'Write a comment first.', 'writeCommentFirst');
+
+  const parentId = req.body?.parentId == null ? null : String(req.body.parentId);
+  if (parentId) {
+    if (!/^c[a-f0-9]{16}$/.test(parentId)) {
+      return sendError(res, 400, 'This comment cannot be replied to.', 'invalidReplyTarget');
+    }
+    const comments = await getComments(id);
+    const parent = comments.find(comment => comment.id === parentId);
+    if (!parent || parent.parentId) {
+      return sendError(res, 400, 'This comment cannot be replied to.', 'invalidReplyTarget');
+    }
+  }
+
+  const comment = {
+    id: `c${crypto.randomBytes(8).toString('hex')}`,
+    parentId,
+    participantToken,
+    name: participant.name,
+    text,
+    createdAt: new Date().toISOString()
+  };
+  const comments = await saveComment(id, comment);
+  if (!comments) return sendError(res, 404, 'This meeting could not be found.', 'meetingNotFound');
+
+  return res.status(201).json({
+    comment: publicComment(comment),
+    comments: comments.map(publicComment)
+  });
+}
 
 module.exports = async function handler(req, res) {
   const id = String(req.query?.id || req.params?.id || '');
@@ -11,6 +76,9 @@ module.exports = async function handler(req, res) {
   try {
     const meeting = await getMeeting(id);
     if (!meeting) return res.status(404).json({ error: '找不到这个约会' });
+
+    const commentsRequest = req.query?.comments === '1' || req.body?.action === 'comment';
+    if (commentsRequest) return handleComments(req, res, meeting, id);
 
     if (req.method === 'GET') return res.status(200).json(publicMeeting(meeting));
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

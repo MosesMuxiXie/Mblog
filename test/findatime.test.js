@@ -60,6 +60,7 @@ function invoke(handler, req) {
   let statusCode = 200;
   let payload;
   const res = {
+    setHeader() {},
     status(code) {
       statusCode = code;
       return this;
@@ -72,7 +73,7 @@ function invoke(handler, req) {
   return Promise.resolve(handler(req, res)).then(() => ({ statusCode, payload }));
 }
 
-test('creates and updates availability with a name only', async () => {
+test('creates a meeting, updates availability, and supports comments and replies', async () => {
   const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'findatime-test-'));
   const originalDataFile = process.env.FINDATIME_DATA_FILE;
   process.env.FINDATIME_DATA_FILE = path.join(temporaryDirectory, 'meetings.json');
@@ -150,6 +151,64 @@ test('creates and updates availability with a name only', async () => {
       count: 1,
       attendees: ['小红']
     });
+
+    const commentWithoutAvailability = await invoke(meetingHandler, {
+      method: 'POST',
+      query: { id: created.payload.id },
+      body: { action: 'comment', text: 'Can we start a little later?' }
+    });
+    assert.equal(commentWithoutAvailability.statusCode, 403);
+    assert.equal(commentWithoutAvailability.payload.code, 'submitAvailabilityFirst');
+
+    const comment = await invoke(meetingHandler, {
+      method: 'POST',
+      query: { id: created.payload.id },
+      body: {
+        action: 'comment',
+        text: 'Can we start a little later?',
+        participantToken: created.payload.creatorToken
+      }
+    });
+    assert.equal(comment.statusCode, 201);
+    assert.equal(comment.payload.comment.parentId, null);
+    assert.equal(Object.prototype.hasOwnProperty.call(comment.payload.comment, 'participantToken'), false);
+
+    const reply = await invoke(meetingHandler, {
+      method: 'POST',
+      query: { id: created.payload.id },
+      body: {
+        action: 'comment',
+        text: 'That works for me.',
+        parentId: comment.payload.comment.id,
+        participantToken: updated.payload.participantToken
+      }
+    });
+    assert.equal(reply.statusCode, 201);
+    assert.equal(reply.payload.comment.parentId, comment.payload.comment.id);
+
+    const nestedReply = await invoke(meetingHandler, {
+      method: 'POST',
+      query: { id: created.payload.id },
+      body: {
+        action: 'comment',
+        text: 'A nested reply',
+        parentId: reply.payload.comment.id,
+        participantToken: created.payload.creatorToken
+      }
+    });
+    assert.equal(nestedReply.statusCode, 400);
+    assert.equal(nestedReply.payload.code, 'invalidReplyTarget');
+
+    const conversation = await invoke(meetingHandler, {
+      method: 'GET',
+      query: { id: created.payload.id, comments: '1' }
+    });
+    assert.equal(conversation.statusCode, 200);
+    assert.equal(conversation.payload.comments.length, 2);
+    assert.deepEqual(
+      conversation.payload.comments.map(item => item.text),
+      ['Can we start a little later?', 'That works for me.']
+    );
   } finally {
     fs.rmSync(temporaryDirectory, { recursive: true, force: true });
     if (originalDataFile == null) delete process.env.FINDATIME_DATA_FILE;

@@ -93,6 +93,30 @@
           <div id="vote-success" class="hint" aria-live="polite"></div>
           <div class="actions"><button id="submit-vote" class="button" type="submit" data-i18n="findatime.submitAvailability">Submit my availability</button></div>
         </form>
+
+        <section id="conversation" class="conversation" aria-labelledby="conversation-title">
+          <div class="conversation-heading">
+            <div>
+              <div class="eyebrow" data-i18n="findatime.conversationEyebrow">Conversation</div>
+              <h2 id="conversation-title" data-i18n="findatime.commentsTitle">Comments</h2>
+            </div>
+            <span id="comment-count" class="pill">0</span>
+          </div>
+          <p class="conversation-intro" data-i18n="findatime.commentsIntro">After submitting your availability, leave a comment or reply to someone below.</p>
+          <div id="comment-gate" class="comment-gate" data-i18n="findatime.submitAvailabilityFirst">Submit your availability to join the conversation.</div>
+          <form id="comment-form" class="comment-composer hidden" novalidate>
+            <label for="comment-text" data-i18n="findatime.addComment">Add a comment</label>
+            <textarea id="comment-text" maxlength="1000" rows="4" placeholder="Share a note with everyone…" data-i18n-placeholder="findatime.commentPlaceholder" required></textarea>
+            <div id="comment-error" class="error" role="alert"></div>
+            <div id="comment-success" class="hint" aria-live="polite"></div>
+            <div class="comment-actions">
+              <span id="comment-author" class="comment-author"></span>
+              <button id="post-comment" class="button small" type="submit" data-i18n="findatime.postComment">Comment</button>
+            </div>
+          </form>
+          <div id="comments-loading" class="comments-status" data-i18n="findatime.loadingComments">Loading comments…</div>
+          <div id="comments-list" class="comments-list" aria-live="polite"></div>
+        </section>
       </div>
     </section>
   </main>

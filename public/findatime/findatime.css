@@ -28,7 +28,7 @@ body {
   font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 
 .site-header {
@@ -136,7 +136,20 @@ input[type="text"], input[type="date"], select {
   outline: none;
 }
 
-input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(34, 123, 114, .12); }
+textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: 13px 15px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  outline: none;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+input:focus, select:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(34, 123, 114, .12); }
 
 .duration-control {
   padding: 18px 20px 14px;
@@ -267,6 +280,69 @@ input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgb
 .error { min-height: 24px; margin-top: 12px; color: #b03125; font-size: .9rem; }
 .loading { padding: 100px 0; text-align: center; color: var(--muted); }
 
+.conversation {
+  margin-top: 48px;
+  padding-top: 38px;
+  border-top: 1px solid var(--line);
+}
+.conversation-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.conversation-heading h2 {
+  margin: 7px 0 0;
+  font: 700 clamp(1.65rem, 4vw, 2.35rem)/1.1 Georgia, "Noto Serif SC", serif;
+  letter-spacing: -.025em;
+}
+.conversation-intro { margin: 12px 0 22px; color: var(--muted); line-height: 1.65; }
+.comment-gate {
+  padding: 15px 17px;
+  border: 1px dashed #b8afa1;
+  border-radius: 14px;
+  color: var(--muted);
+  background: rgba(247, 243, 234, .7);
+  font-size: .9rem;
+}
+.comment-composer {
+  margin-bottom: 28px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #f8f5ee;
+}
+.comment-composer > label, .reply-form > label { display: block; margin-bottom: 9px; font-weight: 750; }
+.comment-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 12px; }
+.comment-author { color: var(--muted); font-size: .82rem; }
+.comments-status { padding: 24px 0; color: var(--muted); text-align: center; }
+.comments-list { display: grid; gap: 14px; }
+.comment {
+  padding: 18px 19px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+.comment-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.comment-name { color: var(--teal); font-weight: 800; }
+.comment-time { color: var(--muted); font-size: .75rem; white-space: nowrap; }
+.comment-text { margin: 9px 0 12px; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+.reply-toggle {
+  padding: 3px 0;
+  border: 0;
+  color: var(--red);
+  background: transparent;
+  font-size: .82rem;
+  font-weight: 800;
+}
+.reply-toggle:hover { color: var(--red-dark); }
+.reply-form { margin-top: 14px; padding-top: 14px; border-top: 1px solid #eee8dd; }
+.reply-form textarea { min-height: 88px; }
+.reply-form .comment-actions { justify-content: flex-end; }
+.replies { display: grid; gap: 10px; margin: 14px 0 0 18px; padding-left: 14px; border-left: 3px solid var(--teal-soft); }
+.reply {
+  padding: 14px 15px;
+  border-radius: 12px;
+  background: #f5faf8;
+}
+.reply .comment-text { margin-bottom: 0; }
+.comments-empty { padding: 24px; border: 1px dashed var(--line); border-radius: 14px; color: var(--muted); text-align: center; }
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -319,6 +395,12 @@ input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgb
   .vote-slot-main { min-width: calc(100% - 40px); grid-template-columns: 1fr; gap: 4px; }
   .vote-slot-main .slot-date { min-width: 0; }
   .vote-details { width: 100%; padding-left: 35px; text-align: left; }
+  .conversation { margin-top: 38px; padding-top: 30px; }
+  .comment-actions { align-items: flex-start; flex-direction: column; }
+  .comment-actions .button { width: 100%; }
+  .comment-header { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .comment-time { white-space: normal; }
+  .replies { margin-left: 5px; padding-left: 10px; }
 }
 
 @media (max-width: 390px) {
