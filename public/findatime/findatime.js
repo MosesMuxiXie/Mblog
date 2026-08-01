@@ -182,17 +182,45 @@ function setError(message, target = 'step-two-error', translationKey = '') {
 }
 
 function renderDurationOptions() {
-  byId('duration-options').innerHTML = Array.from({ length: 16 }, (_, index) => (index + 1) * 30).map(minutes => `
-    <label class="duration-option">
-      <input type="radio" name="duration" value="${minutes}" ${minutes === state.duration ? 'checked' : ''}>
-      <span>${durationText(minutes)}</span>
-    </label>
-  `).join('');
-  document.querySelectorAll('input[name="duration"]').forEach(input => {
-    input.addEventListener('change', event => {
-      state.duration = Number(event.target.value);
-      renderSlots();
-    });
+  const minimumDuration = 30;
+  const maximumDuration = 480;
+  const durationOptions = byId('duration-options');
+  durationOptions.innerHTML = `
+    <div class="duration-display">
+      <output id="duration-value" class="duration-value" for="duration-range">${durationText(state.duration)}</output>
+    </div>
+    <input
+      id="duration-range"
+      class="duration-range"
+      type="range"
+      min="${minimumDuration}"
+      max="${maximumDuration}"
+      step="30"
+      value="${state.duration}"
+      aria-describedby="duration-hint"
+    >
+    <div class="duration-scale" aria-hidden="true">
+      <span>${durationText(minimumDuration)}</span>
+      <span>${durationText(maximumDuration)}</span>
+    </div>
+  `;
+
+  const slider = byId('duration-range');
+  const output = byId('duration-value');
+  const updateSliderPresentation = () => {
+    const duration = durationText(state.duration);
+    const progress = ((state.duration - minimumDuration) / (maximumDuration - minimumDuration)) * 100;
+    output.textContent = duration;
+    slider.setAttribute('aria-label', t('meetingDuration'));
+    slider.setAttribute('aria-valuetext', duration);
+    slider.style.setProperty('--duration-progress', `${progress}%`);
+  };
+
+  updateSliderPresentation();
+  slider.addEventListener('input', event => {
+    state.duration = Number(event.target.value);
+    updateSliderPresentation();
+    renderSlots();
   });
 }
 
