@@ -1,9 +1,10 @@
 const crypto = require('crypto');
 const { createMeeting } = require('../../lib/meetingStore');
 const { normalizeMeetingSlots, validTimeZone } = require('../../lib/meetingTime');
+const { normalizeName } = require('../../lib/findatimeMeeting');
 
-function sendError(res, status, error) {
-  return res.status(status).json({ error });
+function sendError(res, status, error, code) {
+  return res.status(status).json({ error, ...(code ? { code } : {}) });
 }
 
 module.exports = async function handler(req, res) {
@@ -16,8 +17,10 @@ module.exports = async function handler(req, res) {
     const submittedTimeZone = req.body?.timezone;
     const timezone = submittedTimeZone == null ? 'Asia/Shanghai' : String(submittedTimeZone);
     const slots = normalizeMeetingSlots(submittedSlots, submittedTimeZone == null);
+    const creatorName = normalizeName(req.body?.name);
 
-    if (!title) return sendError(res, 400, '请输入约会名称');
+    if (!title) return sendError(res, 400, '请输入约会名称', 'enterMeetingName');
+    if (!creatorName) return sendError(res, 400, '请输入姓名', 'enterParticipantName');
     if (!Number.isInteger(duration) || duration < 30 || duration > 480 || duration % 30 !== 0) {
       return sendError(res, 400, '时长必须为 30 分钟到 8 小时，并以 30 分钟递增');
     }
@@ -42,8 +45,9 @@ module.exports = async function handler(req, res) {
     };
     const creator = {
       token: creatorToken,
-      name: '创建者',
+      name: creatorName,
       availability: meetingSlots.map(slot => slot.id),
+      unavailable: false,
       submittedAt: new Date().toISOString()
     };
 

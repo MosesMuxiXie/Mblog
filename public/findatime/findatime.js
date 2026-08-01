@@ -10,6 +10,7 @@ const state = {
 };
 const byId = id => document.getElementById(id);
 const t = (key, parameters) => MosankaiI18n.t(`findatime.${key}`, parameters);
+const profileStorageKey = 'findatime-profile-v1';
 
 const apiErrorKeys = {
   '请输入约会名称': 'enterMeetingName',
@@ -26,11 +27,41 @@ const apiErrorKeys = {
   '暂时无法保存，请稍后重试': 'submitFailedRetry'
 };
 
-function responseError(message, fallbackKey) {
-  const translationKey = apiErrorKeys[message] || fallbackKey;
+function responseError(message, fallbackKey, code) {
+  const translationKey = code || apiErrorKeys[message] || fallbackKey;
   const error = new Error(t(translationKey));
   error.translationKey = translationKey;
   return error;
+}
+
+function loadProfile() {
+  try {
+    const profile = JSON.parse(localStorage.getItem(profileStorageKey) || '{}');
+    const name = typeof profile.name === 'string' ? profile.name : '';
+    if (Object.prototype.hasOwnProperty.call(profile, 'email')) saveProfile(name);
+    return name;
+  } catch {
+    return '';
+  }
+}
+
+function saveProfile(name) {
+  localStorage.setItem(profileStorageKey, JSON.stringify({
+    name: name.trim()
+  }));
+}
+
+function fillProfile(nameId) {
+  byId(nameId).value = loadProfile();
+}
+
+function validateName(nameId, errorTarget) {
+  const name = byId(nameId).value.trim();
+  if (!name) {
+    setError(t('enterParticipantName'), errorTarget, 'enterParticipantName');
+    return null;
+  }
+  return name;
 }
 
 function trackVisit() {
@@ -195,6 +226,7 @@ function goToStep(step) {
 function setupCreator() {
   renderDurationOptions();
   renderSlots();
+  fillProfile('creator-name');
 
   byId('creator-timezone').textContent = t('currentTimezone', { timezone: timeZoneText() });
   const today = localDateValue();
@@ -211,6 +243,7 @@ function setupCreator() {
     if (!byId('meeting-title').value.trim()) {
       return setError(t('enterMeetingName'), 'step-one-error', 'enterMeetingName');
     }
+    if (!validateName('creator-name', 'step-one-error')) return;
     goToStep(2);
   });
   byId('back-step').addEventListener('click', () => goToStep(1));
@@ -230,6 +263,8 @@ function setupCreator() {
 
   byId('create-meeting').addEventListener('click', async () => {
     if (!state.slots.length) return setError(t('addAtLeastOne'), 'step-two-error', 'addAtLeastOne');
+    const name = validateName('creator-name', 'step-two-error');
+    if (!name) return;
     const button = byId('create-meeting');
     state.creating = true;
     button.disabled = true;
@@ -240,13 +275,15 @@ function setupCreator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: byId('meeting-title').value.trim(),
+          name,
           duration: state.duration,
           timezone: state.timezone,
           slots: state.slots
         })
       });
       const result = await response.json();
-      if (!response.ok) throw responseError(result.error, 'createFailed');
+      if (!response.ok) throw responseError(result.error, 'createFailed', result.code);
+      saveProfile(name);
       localStorage.setItem(`findatime-token-${result.id}`, result.creatorToken);
       const fullUrl = `${window.location.origin}${result.url}`;
       byId('share-link').value = fullUrl;
@@ -278,6 +315,7 @@ function summaryValues(meeting) {
 function renderMeeting(meeting) {
   state.meeting = meeting;
   const summary = summaryValues(meeting);
+  const unavailable = meeting.unavailable || { count: 0, attendees: [] };
   byId('meeting-title-view').textContent = meeting.title;
   byId('summary-option-count').textContent = meeting.slots.length;
   byId('summary-best-times').textContent = summary.times;
@@ -288,7 +326,7 @@ function renderMeeting(meeting) {
     meeting.participantCount === 1 ? 'onePersonResponded' : 'peopleResponded',
     { count: meeting.participantCount }
   );
-  byId('vote-list').innerHTML = meeting.slots.map(slot => {
+  const timeOptions = meeting.slots.map(slot => {
     const parts = slotParts(slot.start, meeting.duration);
     const attendeeText = slot.attendees?.length
       ? slot.attendees.map(escapeText).join(MosankaiI18n.language === 'zh-CN' ? '、' : ', ')
@@ -305,17 +343,44 @@ function renderMeeting(meeting) {
       </span>
     </label>`;
   }).join('');
+  const unavailableNames = unavailable.attendees?.length
+    ? unavailable.attendees.map(escapeText).join(MosankaiI18n.language === 'zh-CN' ? '、' : ', ')
+    : t('noOne');
+  byId('vote-list').innerHTML = `${timeOptions}
+    <label class="vote-slot vote-slot-unavailable">
+      <input id="cannot-attend" type="checkbox" name="unavailable">
+      <span class="vote-slot-main unavailable-option-main">
+        <span class="slot-date">${t('cannotAttend')}</span>
+        <span class="slot-time">${t('cannotAttendHint')}</span>
+      </span>
+      <span class="vote-details">
+        <span class="vote-count">${t(unavailable.count === 1 ? 'oneCannotAttend' : 'peopleCannotAttend', { count: unavailable.count })}</span>
+        <span class="attendee-names">${t('cannotAttendBy', { names: unavailableNames })}</span>
+      </span>
+    </label>`;
+
+  const unavailableInput = byId('cannot-attend');
+  const timeInputs = [...document.querySelectorAll('input[name="availability"]')];
+  timeInputs.forEach(input => {
+    input.addEventListener('change', () => {
+      if (input.checked) unavailableInput.checked = false;
+    });
+  });
+  unavailableInput.addEventListener('change', () => {
+    if (unavailableInput.checked) timeInputs.forEach(input => { input.checked = false; });
+  });
 }
 
 async function setupMeeting(id) {
   byId('creator-view').classList.add('hidden');
   byId('meeting-view').classList.remove('hidden');
+  fillProfile('participant-name');
   state.meetingMessageKey = 'loadingMeeting';
   byId('meeting-loading').textContent = t(state.meetingMessageKey);
   try {
     const response = await fetch(`/api/findatime/${encodeURIComponent(id)}`);
     const meeting = await response.json();
-    if (!response.ok) throw responseError(meeting.error, 'meetingNotFound');
+    if (!response.ok) throw responseError(meeting.error, 'meetingNotFound', meeting.code);
     byId('meeting-loading').classList.add('hidden');
     byId('meeting-content').classList.remove('hidden');
     renderMeeting(meeting);
@@ -328,9 +393,10 @@ async function setupMeeting(id) {
     event.preventDefault();
     setError('', 'vote-error');
     const availability = [...document.querySelectorAll('input[name="availability"]:checked')].map(input => input.value);
-    const name = byId('participant-name').value.trim();
-    if (!name) return setError(t('enterParticipantName'), 'vote-error', 'enterParticipantName');
-    if (!availability.length) return setError(t('chooseAvailability'), 'vote-error', 'chooseAvailability');
+    const unavailable = byId('cannot-attend').checked;
+    const name = validateName('participant-name', 'vote-error');
+    if (!name) return;
+    if (!unavailable && !availability.length) return setError(t('chooseAvailability'), 'vote-error', 'chooseAvailability');
     const submit = byId('submit-vote');
     state.submitting = true;
     submit.disabled = true;
@@ -340,10 +406,16 @@ async function setupMeeting(id) {
       const response = await fetch(`/api/findatime/${encodeURIComponent(id)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, availability, participantToken: localStorage.getItem(tokenKey) })
+        body: JSON.stringify({
+          name,
+          availability,
+          unavailable,
+          participantToken: localStorage.getItem(tokenKey)
+        })
       });
       const result = await response.json();
-      if (!response.ok) throw responseError(result.error, 'submitFailed');
+      if (!response.ok) throw responseError(result.error, 'submitFailed', result.code);
+      saveProfile(name);
       localStorage.setItem(tokenKey, result.participantToken);
       renderMeeting(result.meeting);
       byId('vote-success').textContent = t('availabilitySaved');

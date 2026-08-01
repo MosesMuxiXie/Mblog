@@ -221,6 +221,12 @@ input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgb
 .vote-details { min-width: 160px; display: grid; gap: 4px; text-align: right; }
 .vote-count { color: var(--teal); font-weight: 800; }
 .attendee-names { color: var(--muted); font-size: .78rem; line-height: 1.4; }
+.vote-slot-unavailable { border-style: dashed; }
+.vote-slot-unavailable:has(input:checked) { border-color: var(--red); background: #fff5f2; }
+.vote-slot-unavailable input { accent-color: var(--red); }
+.vote-slot-unavailable .vote-count { color: var(--red); }
+.unavailable-option-main .slot-date { color: var(--red); }
+.unavailable-option-main .slot-time { color: var(--muted); font-size: .82rem; }
 .error { min-height: 24px; margin-top: 12px; color: #b03125; font-size: .9rem; }
 .loading { padding: 100px 0; text-align: center; color: var(--muted); }
 

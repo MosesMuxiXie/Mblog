@@ -38,6 +38,10 @@
           <label for="meeting-title" data-i18n="findatime.meetingName">Meeting name</label>
           <input id="meeting-title" type="text" maxlength="80" placeholder="For example: Project kickoff" data-i18n-placeholder="findatime.meetingNameExample" autocomplete="off">
         </div>
+        <div class="field">
+          <label for="creator-name" data-i18n="findatime.yourName">Your name</label>
+          <input id="creator-name" type="text" maxlength="40" placeholder="Enter your name" data-i18n-placeholder="findatime.enterName" autocomplete="name" required>
+        </div>
         <fieldset class="field" style="border:0;padding:0">
           <legend class="field-label" data-i18n="findatime.meetingDuration">Meeting duration</legend>
           <div id="duration-options" class="duration-grid"></div>
@@ -78,10 +82,10 @@
           <div><dt data-i18n="findatime.bestMeetingTime">Best meeting time:</dt><dd id="summary-best-times"></dd></div>
           <div><dt data-i18n="findatime.participants">Participants:</dt><dd id="summary-attendance"></dd></div>
         </dl>
-        <form id="vote-form">
+        <form id="vote-form" novalidate>
           <div class="field">
             <label for="participant-name" data-i18n="findatime.yourName">Your name</label>
-            <input id="participant-name" type="text" maxlength="40" placeholder="Enter your name" data-i18n-placeholder="findatime.enterName" autocomplete="name">
+            <input id="participant-name" type="text" maxlength="40" placeholder="Enter your name" data-i18n-placeholder="findatime.enterName" autocomplete="name" required>
           </div>
           <div class="field-label" data-i18n="findatime.selectAvailable">Select the times you can attend</div>
           <div id="vote-list" class="vote-list"></div>
