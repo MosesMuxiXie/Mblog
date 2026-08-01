@@ -6,6 +6,7 @@ const state = {
   timezone: browserTimeZone,
   creating: false,
   submitting: false,
+  creatorNameEdited: false,
   meetingMessageKey: 'loadingMeeting'
 };
 const byId = id => document.getElementById(id);
@@ -254,7 +255,11 @@ function goToStep(step) {
 function setupCreator() {
   renderDurationOptions();
   renderSlots();
-  fillProfile('creator-name');
+  const creatorName = byId('creator-name');
+  creatorName.value = t('defaultCreatorName');
+  creatorName.addEventListener('input', () => {
+    state.creatorNameEdited = true;
+  });
 
   byId('creator-timezone').textContent = t('currentTimezone', { timezone: timeZoneText() });
   const today = localDateValue();
@@ -463,6 +468,7 @@ const match = window.location.pathname.match(/^\/findatime\/uuid\/(ua[a-f0-9]{14
 window.addEventListener('mosankai:languagechange', () => {
   renderDurationOptions();
   renderSlots();
+  if (!state.creatorNameEdited) byId('creator-name').value = t('defaultCreatorName');
   byId('creator-timezone').textContent = t('currentTimezone', { timezone: timeZoneText() });
   byId('create-meeting').textContent = t(state.creating ? 'creating' : 'createAndGetLink');
   byId('submit-vote').textContent = t(state.submitting ? 'submitting' : 'submitAvailability');
