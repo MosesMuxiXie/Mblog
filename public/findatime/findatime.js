@@ -17,6 +17,27 @@ const state = {
 const byId = id => document.getElementById(id);
 const t = (key, parameters) => MosankaiI18n.t(`findatime.${key}`, parameters);
 const profileStorageKey = 'findatime-profile-v1';
+let creatorLayoutFrame = 0;
+
+function syncCreatorLayout() {
+  creatorLayoutFrame = 0;
+  const creatorVisible = document.body.classList.contains('creator-layout') &&
+    !byId('creator-view').classList.contains('hidden');
+
+  document.body.classList.remove('creator-layout-wide');
+  if (!creatorVisible || !window.matchMedia('(orientation: landscape)').matches) return;
+
+  // Measure the regular layout first, then use the wider two-column layout only
+  // when the creation form would otherwise make the page scroll vertically.
+  void byId('creator-view').offsetHeight;
+  const pageOverflows = document.documentElement.scrollHeight > window.innerHeight + 1;
+  document.body.classList.toggle('creator-layout-wide', pageOverflows);
+}
+
+function queueCreatorLayoutSync() {
+  if (creatorLayoutFrame) cancelAnimationFrame(creatorLayoutFrame);
+  creatorLayoutFrame = requestAnimationFrame(syncCreatorLayout);
+}
 
 const apiErrorKeys = {
   '请输入约会名称': 'enterMeetingName',
@@ -198,6 +219,7 @@ function setError(message, target = 'step-two-error', translationKey = '') {
   element.textContent = message || '';
   if (translationKey) element.dataset.findatimeKey = translationKey;
   else delete element.dataset.findatimeKey;
+  queueCreatorLayoutSync();
 }
 
 function renderDurationOptions() {
@@ -259,6 +281,7 @@ function renderSlots() {
       renderSlots();
     });
   });
+  queueCreatorLayoutSync();
 }
 
 function goToStep(step) {
@@ -268,9 +291,11 @@ function goToStep(step) {
   byId('progress-two').classList.toggle('active', step === 2);
   setError('', 'step-one-error');
   setError('', 'step-two-error');
+  queueCreatorLayoutSync();
 }
 
 function setupCreator() {
+  document.body.classList.add('creator-layout');
   renderDurationOptions();
   renderSlots();
   const creatorName = byId('creator-name');
@@ -355,6 +380,7 @@ function setupCreator() {
     await navigator.clipboard.writeText(byId('share-link').value);
     byId('copy-link').textContent = t('copied');
   });
+  queueCreatorLayoutSync();
 }
 
 function summaryValues(meeting) {
@@ -607,6 +633,7 @@ function setupConversation(id) {
 }
 
 async function setupMeeting(id) {
+  document.body.classList.remove('creator-layout', 'creator-layout-wide');
   byId('creator-view').classList.add('hidden');
   byId('meeting-view').classList.remove('hidden');
   fillProfile('participant-name');
@@ -692,7 +719,10 @@ window.addEventListener('mosankai:languagechange', () => {
     renderComments(match[1]);
     if (state.commentsLoading) byId('comments-loading').textContent = t('loadingComments');
   }
+  queueCreatorLayoutSync();
 });
+
+window.addEventListener('resize', queueCreatorLayoutSync);
 
 trackVisit();
 if (match) setupMeeting(match[1]);
