@@ -564,7 +564,7 @@ body.editor-mode .studio-panel { display: block; height: 100vh; padding: 0; }
   font-size: 11px;
 }
 .studio-tabs button.active { border-bottom-color: var(--accent); }
-.studio-tabs span { margin-bottom: 15px; color: #92979b; font-size: 10px; }
+.studio-tabs button[aria-selected="false"] { color: #767b80; }
 .block-search {
   display: flex;
   height: 40px;
@@ -602,6 +602,106 @@ body.editor-mode .studio-panel { display: block; height: 100vh; padding: 0; }
 .block-help { margin: 34px 14px; border-top: 1px solid #e1e2e3; padding-top: 17px; }
 .block-help strong { font-size: 10px; }
 .block-help p { color: #747a80; font-size: 9px; line-height: 1.6; }
+.insert-library-panel { padding-bottom: 28px; }
+.insert-section { border-bottom: 1px solid #e5e6e7; padding: 18px 14px; }
+.insert-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+.insert-section-heading strong, .insert-section-heading small { display: block; }
+.insert-section-heading strong { color: #262a2e; font-size: 10px; }
+.insert-section-heading small { margin-top: 3px; color: #858a8f; font-size: 8px; }
+.mini-text-button, .custom-emoji-label button {
+  border: 0;
+  padding: 2px 0;
+  color: #287dc0;
+  background: transparent;
+  font-size: 8px;
+  font-weight: 700;
+}
+.local-file-button {
+  display: flex;
+  width: 100%;
+  min-height: 104px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px dashed #aeb3b7;
+  border-radius: 3px;
+  color: #343a40;
+  background: #fafafa;
+}
+.local-file-button:hover { border-color: var(--accent); color: var(--accent); background: #fff7f3; }
+.local-file-button > span { font-size: 22px; font-weight: 300; line-height: 1; }
+.local-file-button b { font-size: 9px; }
+.local-file-button small { color: #888e93; font-size: 8px; }
+.emoji-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.emoji-grid button {
+  display: grid;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 0;
+  place-items: center;
+  background: transparent;
+  font-size: 17px;
+}
+.emoji-grid button:hover { border-color: #d4d7da; background: #f4f5f6; transform: scale(1.08); }
+.custom-emoji-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  align-items: end;
+  gap: 6px;
+  margin-top: 12px;
+  border-top: 1px solid #ececed;
+  padding-top: 11px;
+}
+.custom-emoji-form label { display: grid; gap: 5px; }
+.custom-emoji-form label span { color: #777d82; font-size: 8px; }
+.custom-emoji-form input { height: 33px; font-size: 13px; }
+.custom-emoji-form > button {
+  height: 33px;
+  border: 0;
+  border-radius: 2px;
+  color: #fff;
+  background: #30363b;
+  font-size: 8px;
+  font-weight: 700;
+}
+.custom-emoji-area { margin-top: 13px; }
+.custom-emoji-label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; color: #777d82; font-size: 8px; }
+.design-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.design-grid button {
+  display: flex;
+  min-height: 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #e0e2e3;
+  border-radius: 3px;
+  padding: 7px 3px;
+  color: #40454a;
+  background: #fff;
+  font-size: 8px;
+}
+.design-grid button:hover { border-color: var(--accent); color: var(--accent); background: #fff8f5; }
+.design-grid button > span { color: #298ed0; font-family: Georgia, serif; font-size: 18px; line-height: 1; }
+.symbol-picker {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
+  margin-top: 11px;
+  border-top: 1px solid #ececed;
+  padding-top: 11px;
+}
+.symbol-picker button { height: 27px; border: 0; border-radius: 2px; padding: 0; background: #f3f4f4; font-size: 13px; }
+.symbol-picker button:hover { color: var(--accent); background: #fbece5; }
 .canvas-stage { min-width: 0; overflow: auto; background: #f8f8f8; }
 .format-toolbar {
   position: sticky;
@@ -682,6 +782,22 @@ body.editor-mode .studio-panel { display: block; height: 100vh; padding: 0; }
 .rich-editor blockquote { margin: 1.5em 0; border-left: 4px solid var(--accent); padding: .35em 1.1em; color: #59636b; background: #faf4f1; }
 .rich-editor img { display: block; max-width: 100%; height: auto; margin: 1.5em auto; }
 .rich-editor pre { overflow-x: auto; border-radius: 3px; padding: 16px; color: #eef2f4; background: #17242c; }
+.rich-editor .insert-card { margin: 1.4em 0; border-left: 4px solid #257fc0; border-radius: 3px; padding: 16px 18px; color: #32414c; background: #edf7ff; }
+.rich-editor .insert-card-tip { border-left-color: #2e986d; background: #eefaf5; }
+.rich-editor .insert-card-warning { border-left-color: #d85b35; background: #fff2ed; }
+.rich-editor .insert-card strong { display: block; margin-bottom: 4px; }
+.rich-editor .insert-table { width: 100%; margin: 1.4em 0; border-collapse: collapse; table-layout: fixed; }
+.rich-editor .insert-table th, .rich-editor .insert-table td { border: 1px solid #cfd4d8; padding: 9px 10px; vertical-align: top; }
+.rich-editor .insert-table th { background: #f2f4f5; font-weight: 700; }
+.rich-editor .insert-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 1.4em 0; }
+.rich-editor .insert-column { min-height: 80px; border: 1px dashed #cbd0d4; padding: 13px; }
+.rich-editor .insert-button { display: inline-block; margin: .45em 0 1.4em; border-radius: 3px; padding: 9px 17px; color: #fff; background: #d85832; font-weight: 700; text-decoration: none; }
+.rich-editor .insert-attachment { display: flex; align-items: center; gap: 12px; margin: 1.3em 0; border: 1px solid #d8dcdf; border-radius: 4px; padding: 13px 15px; color: #2c6e9d; background: #f8fafb; text-decoration: none; }
+.rich-editor .insert-attachment-icon { display: grid; width: 34px; height: 40px; flex: 0 0 auto; place-items: center; border-radius: 2px; color: #fff; background: #3c7297; font-size: 9px; font-weight: 800; }
+.rich-editor .insert-attachment-copy { display: grid; line-height: 1.4; }
+.rich-editor .insert-attachment-copy small { color: #7a8085; font-size: 10px; }
+.rich-editor .insert-date { display: inline-block; margin: .6em 0 1.2em; border: 1px solid #dadddf; border-radius: 999px; padding: 4px 11px; color: #596168; background: #f8f8f8; font-size: .82em; }
+.rich-editor .insert-signature { margin: 2.2em 0 1.2em auto; border-top: 1px solid #cfd3d5; padding-top: 8px; color: #596168; text-align: right; }
 .post-settings {
   width: 300px;
   overflow-y: auto;
@@ -804,5 +920,7 @@ body.editor-mode .studio-panel { display: block; height: 100vh; padding: 0; }
   .writing-canvas { width: calc(100% - 18px); min-height: calc(100vh - 120px); margin: 12px auto 40px; padding: 34px 23px 80px; }
   .canvas-title { font-size: 34px; }
   .rich-editor { min-height: 500px; }
+  .rich-editor .insert-columns { grid-template-columns: 1fr; }
+  .rich-editor .insert-table { display: block; overflow-x: auto; }
   .studio-message { right: 12px; bottom: 12px; left: 12px; max-width: none; }
 }

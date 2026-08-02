@@ -110,29 +110,101 @@
 
           <div class="studio-workspace">
             <aside id="block-library" class="block-library">
-              <div class="studio-tabs">
-                <button class="active" type="button">区块</button>
-                <span>插入内容</span>
+              <div class="studio-tabs" role="tablist" aria-label="内容工具">
+                <button id="blocks-tab" class="active" type="button" role="tab"
+                  aria-selected="true" aria-controls="blocks-library-panel"
+                  data-library-tab="blocks">区块</button>
+                <button id="insert-tab" type="button" role="tab"
+                  aria-selected="false" aria-controls="insert-library-panel"
+                  data-library-tab="insert">插入内容</button>
               </div>
-              <label class="block-search">
-                <span aria-hidden="true">⌕</span>
-                <input id="block-search-input" type="search" placeholder="搜索区块">
-              </label>
-              <p class="block-group-label">基础区块</p>
-              <div id="block-grid" class="block-grid">
-                <button type="button" data-block="paragraph"><span>¶</span>段落</button>
-                <button type="button" data-block="heading"><span>H</span>标题</button>
-                <button type="button" data-block="image"><span>▧</span>图片</button>
-                <button type="button" data-block="quote"><span>❝</span>引用</button>
-                <button type="button" data-block="unorderedList"><span>☷</span>列表</button>
-                <button type="button" data-block="orderedList"><span>1.</span>编号列表</button>
-                <button type="button" data-block="divider"><span>—</span>分隔线</button>
-                <button type="button" data-block="code"><span>&lt;/&gt;</span>代码</button>
-                <button type="button" data-block="link"><span>⌁</span>链接</button>
+
+              <div id="blocks-library-panel" role="tabpanel" aria-labelledby="blocks-tab">
+                <label class="block-search">
+                  <span aria-hidden="true">⌕</span>
+                  <input id="block-search-input" type="search" placeholder="搜索区块">
+                </label>
+                <p class="block-group-label">基础区块</p>
+                <div id="block-grid" class="block-grid">
+                  <button type="button" data-block="paragraph"><span>¶</span>段落</button>
+                  <button type="button" data-block="heading"><span>H</span>标题</button>
+                  <button type="button" data-block="image"><span>▧</span>图片</button>
+                  <button type="button" data-block="quote"><span>❝</span>引用</button>
+                  <button type="button" data-block="unorderedList"><span>☷</span>列表</button>
+                  <button type="button" data-block="orderedList"><span>1.</span>编号列表</button>
+                  <button type="button" data-block="divider"><span>—</span>分隔线</button>
+                  <button type="button" data-block="code"><span>&lt;/&gt;</span>代码</button>
+                  <button type="button" data-block="link"><span>⌁</span>链接</button>
+                </div>
+                <div class="block-help">
+                  <strong>图片支持</strong>
+                  <p>可插入网络图片，或从“插入内容”上传本地图片与附件。</p>
+                </div>
               </div>
-              <div class="block-help">
-                <strong>图片支持</strong>
-                <p>可插入网络图片，或上传不超过 700 KB 的 JPG、PNG、GIF、WebP。</p>
+
+              <div id="insert-library-panel" class="hidden insert-library-panel"
+                role="tabpanel" aria-labelledby="insert-tab">
+                <section class="insert-section">
+                  <div class="insert-section-heading">
+                    <div>
+                      <strong>本地文件</strong>
+                      <small>图片或可下载附件</small>
+                    </div>
+                  </div>
+                  <button id="local-file-button" class="local-file-button" type="button">
+                    <span aria-hidden="true">＋</span>
+                    <b>从电脑选择文件</b>
+                    <small>图片最大 700 KB，其他文件最大 500 KB</small>
+                  </button>
+                </section>
+
+                <section class="insert-section">
+                  <div class="insert-section-heading">
+                    <div>
+                      <strong>表情</strong>
+                      <small>点击即可插入光标处</small>
+                    </div>
+                    <button id="toggle-custom-emoji" class="mini-text-button" type="button"
+                      aria-expanded="false" aria-controls="custom-emoji-form">＋ 自定义</button>
+                  </div>
+                  <div id="default-emoji-grid" class="emoji-grid" aria-label="默认表情"></div>
+                  <div id="custom-emoji-form" class="custom-emoji-form hidden">
+                    <label>
+                      <span>粘贴一个表情或短符号</span>
+                      <input id="custom-emoji-input" type="text" maxlength="12"
+                        placeholder="例如：🪐">
+                    </label>
+                    <button id="add-custom-emoji" type="button">保存</button>
+                  </div>
+                  <div id="custom-emoji-area" class="custom-emoji-area hidden">
+                    <div class="custom-emoji-label">
+                      <span>我的表情</span>
+                      <button id="clear-custom-emojis" type="button">清空</button>
+                    </div>
+                    <div id="custom-emoji-grid" class="emoji-grid"></div>
+                  </div>
+                </section>
+
+                <section class="insert-section">
+                  <div class="insert-section-heading">
+                    <div>
+                      <strong>设计元素</strong>
+                      <small>类似 Word 的常用插入项</small>
+                    </div>
+                  </div>
+                  <div id="design-grid" class="design-grid">
+                    <button type="button" data-design="table"><span>▦</span>表格</button>
+                    <button type="button" data-design="info"><span>i</span>信息卡</button>
+                    <button type="button" data-design="tip"><span>✦</span>提示卡</button>
+                    <button type="button" data-design="warning"><span>!</span>警示卡</button>
+                    <button type="button" data-design="columns"><span>▥</span>双栏</button>
+                    <button type="button" data-design="button"><span>▣</span>按钮</button>
+                    <button type="button" data-design="date"><span>◷</span>日期时间</button>
+                    <button type="button" data-design="symbol"><span>Ω</span>特殊符号</button>
+                    <button type="button" data-design="signature"><span>✎</span>署名</button>
+                  </div>
+                  <div id="symbol-picker" class="symbol-picker hidden" aria-label="特殊符号"></div>
+                </section>
               </div>
             </aside>
 
@@ -264,6 +336,9 @@
 
           <input id="inline-image-file" type="file"
             accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+          <input id="local-content-file" type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"
+            hidden>
           <div id="editor-message" class="studio-message" role="alert" aria-live="polite"></div>
         </form>
       </section>

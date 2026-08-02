@@ -33,7 +33,11 @@ function validateBlog(body = {}) {
   if (image.error) return image;
   const normalizedSlug = normalizeSlug(body.slug);
   if (normalizedSlug.error) return normalizedSlug;
-  const contentHtml = sanitizeBlogHtml(body.contentHtml || '');
+  const rawContentHtml = String(body.contentHtml || '');
+  if (rawContentHtml.length > 2000000) {
+    return { error: '正文中的图片或附件太多，请移除部分本地文件后再发布' };
+  }
+  const contentHtml = sanitizeBlogHtml(rawContentHtml);
   const richText = htmlToText(contentHtml);
   const plainContent = cleanText(body.content, 100000);
   const content = richText || plainContent;

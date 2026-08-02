@@ -6,6 +6,26 @@ let editorDirty = false;
 let slugTouched = false;
 let savedSelection = null;
 
+const DEFAULT_EMOJIS = [
+  '😀', '😄', '😂', '🥹', '😍', '🤔', '😎',
+  '👍', '👏', '🙏', '💪', '🎉', '❤️', '🔥',
+  '✨', '💡', '📌', '✅', '⚠️', '🚀', '🌿'
+];
+const INSERT_SYMBOLS = ['©', '®', '™', '°', '±', '×', '÷', '≠', '≈', '≤', '≥', '∞', '√', '∑', 'π', 'Ω'];
+const CUSTOM_EMOJI_STORAGE_KEY = 'mosankai-blog-custom-emojis';
+const ATTACHMENT_TYPES = new Map([
+  ['pdf', 'application/pdf'],
+  ['txt', 'text/plain'],
+  ['csv', 'text/csv'],
+  ['doc', 'application/msword'],
+  ['docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  ['xls', 'application/vnd.ms-excel'],
+  ['xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+  ['ppt', 'application/vnd.ms-powerpoint'],
+  ['pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+  ['zip', 'application/zip']
+]);
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     ...options,
@@ -28,6 +48,41 @@ function escapeHtml(value) {
   const node = document.createElement('span');
   node.textContent = String(value || '');
   return node.innerHTML;
+}
+
+function readCustomEmojis() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CUSTOM_EMOJI_STORAGE_KEY) || '[]');
+    return Array.isArray(value)
+      ? value.map(item => String(item || '').trim()).filter(Boolean).slice(0, 28)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomEmojis(emojis) {
+  localStorage.setItem(CUSTOM_EMOJI_STORAGE_KEY, JSON.stringify(emojis.slice(0, 28)));
+}
+
+function renderEmojiGrid(containerId, emojis) {
+  const container = byId(containerId);
+  container.replaceChildren();
+  emojis.forEach(emoji => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.emoji = emoji;
+    button.title = `插入 ${emoji}`;
+    button.setAttribute('aria-label', `插入表情 ${emoji}`);
+    button.textContent = emoji;
+    container.append(button);
+  });
+}
+
+function renderCustomEmojis() {
+  const emojis = readCustomEmojis();
+  renderEmojiGrid('custom-emoji-grid', emojis);
+  byId('custom-emoji-area').classList.toggle('hidden', !emojis.length);
 }
 
 function safeImage(value) {
@@ -76,6 +131,17 @@ function closeMenu() {
 function closeStudioPanels() {
   byId('block-library').classList.remove('mobile-open');
   byId('post-settings').classList.remove('mobile-open');
+}
+
+function switchLibraryTab(tabName) {
+  const insertActive = tabName === 'insert';
+  byId('blocks-library-panel').classList.toggle('hidden', insertActive);
+  byId('insert-library-panel').classList.toggle('hidden', !insertActive);
+  document.querySelectorAll('[data-library-tab]').forEach(tab => {
+    const active = tab.dataset.libraryTab === tabName;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+  });
 }
 
 function showPanel(panelId) {
@@ -204,6 +270,8 @@ function resetEditor() {
   updateFeaturedImagePreview('');
   byId('block-library').classList.remove('collapsed');
   byId('post-settings').classList.remove('collapsed');
+  switchLibraryTab('blocks');
+  byId('symbol-picker').classList.add('hidden');
   editorDirty = false;
   slugTouched = false;
   savedSelection = null;
@@ -306,8 +374,12 @@ function saveSelection() {
 
 function restoreSelection() {
   contentEditor.focus();
-  if (!savedSelection) return;
   const selection = window.getSelection();
+  if (!savedSelection || !contentEditor.contains(savedSelection.commonAncestorContainer)) {
+    savedSelection = document.createRange();
+    savedSelection.selectNodeContents(contentEditor);
+    savedSelection.collapse(false);
+  }
   selection.removeAllRanges();
   selection.addRange(savedSelection);
 }
@@ -380,6 +452,114 @@ function insertBlock(type) {
   else if (type === 'orderedList') runCommand('insertOrderedList');
 }
 
+function insertText(text) {
+  insertHtml(escapeHtml(text));
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  return `${Math.max(.1, bytes / 1024).toFixed(1)} KB`;
+}
+
+async function insertInlineImageFile(file) {
+  if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) {
+    throw new Error('请选择 JPG、PNG、GIF 或 WebP 图片');
+  }
+  if (file.size > 700 * 1024) {
+    throw new Error('图片超过 700 KB，请压缩后再上传');
+  }
+  const source = await fileDataUrl(file);
+  runCommand('insertImage', source);
+}
+
+async function insertLocalContentFile(file) {
+  if (file.type.startsWith('image/')) {
+    await insertInlineImageFile(file);
+    showStudioMessage('本地图片已插入正文。', 'success');
+    return;
+  }
+
+  const extension = file.name.split('.').pop()?.toLocaleLowerCase('en-US') || '';
+  const mime = ATTACHMENT_TYPES.get(extension);
+  if (!mime) {
+    throw new Error('暂不支持这种文件；可上传 PDF、Office、TXT、CSV 或 ZIP');
+  }
+  if (file.size > 500 * 1024) {
+    throw new Error('附件超过 500 KB，请压缩后再上传');
+  }
+
+  const source = await fileDataUrl(file);
+  const dataUrl = source.replace(/^data:[^;,]*;base64,/i, `data:${mime};base64,`);
+  const fileName = file.name
+    .replace(/[^\p{L}\p{N}\s._()+-]/gu, '_')
+    .slice(0, 160) || `attachment.${extension}`;
+  const label = extension.toUpperCase().slice(0, 5) || 'FILE';
+  insertHtml(`
+    <p><a class="insert-attachment" href="${escapeHtml(dataUrl)}"
+      download="${escapeHtml(fileName)}">
+      <span class="insert-attachment-icon">${escapeHtml(label)}</span>
+      <span class="insert-attachment-copy"><strong>${escapeHtml(fileName)}</strong>
+      <small>${escapeHtml(formatFileSize(file.size))} · 点击下载</small></span>
+    </a></p><p><br></p>`);
+  showStudioMessage('本地附件已插入正文。', 'success');
+}
+
+function insertDesign(type) {
+  const staticDesigns = {
+    table: `
+      <table class="insert-table">
+        <thead><tr><th>标题 1</th><th>标题 2</th><th>标题 3</th></tr></thead>
+        <tbody>
+          <tr><td>内容</td><td>内容</td><td>内容</td></tr>
+          <tr><td>内容</td><td>内容</td><td>内容</td></tr>
+        </tbody>
+      </table><p><br></p>`,
+    info: '<div class="insert-card insert-card-info"><strong>信息</strong><p>在这里填写需要补充说明的内容。</p></div><p><br></p>',
+    tip: '<div class="insert-card insert-card-tip"><strong>小提示</strong><p>在这里填写对读者有帮助的提示。</p></div><p><br></p>',
+    warning: '<div class="insert-card insert-card-warning"><strong>请注意</strong><p>在这里填写需要特别留意的内容。</p></div><p><br></p>',
+    columns: '<div class="insert-columns"><div class="insert-column"><p>左栏内容</p></div><div class="insert-column"><p>右栏内容</p></div></div><p><br></p>'
+  };
+  if (staticDesigns[type]) {
+    insertHtml(staticDesigns[type]);
+    return;
+  }
+
+  if (type === 'button') {
+    saveSelection();
+    const label = window.prompt('按钮上显示什么文字？', '了解更多');
+    if (label === null || !label.trim()) return;
+    const value = window.prompt('输入按钮链接（https://… 或站内路径）', 'https://');
+    if (value === null) return;
+    const url = validInlineImageUrl(value);
+    if (!url) {
+      showStudioMessage('按钮链接无效，请使用 http、https 或站内路径。', 'error');
+      return;
+    }
+    insertHtml(`<p><a class="insert-button" href="${escapeHtml(url)}" target="_blank">${escapeHtml(label.trim().slice(0, 60))}</a></p><p><br></p>`);
+    return;
+  }
+
+  if (type === 'date') {
+    const now = new Date();
+    const value = new Intl.DateTimeFormat('zh-CN', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+      hour: '2-digit', minute: '2-digit'
+    }).format(now);
+    insertHtml(`<p><span class="insert-date">${escapeHtml(value)}</span></p><p><br></p>`);
+    return;
+  }
+
+  if (type === 'symbol') {
+    byId('symbol-picker').classList.toggle('hidden');
+    return;
+  }
+
+  if (type === 'signature') {
+    const author = byId('author').value.trim() || adminStatus?.username || 'Admin';
+    insertHtml(`<div class="insert-signature">撰文 · ${escapeHtml(author)}</div><p><br></p>`);
+  }
+}
+
 function markEditorDirty() {
   editorDirty = true;
   updateDocumentState();
@@ -391,9 +571,14 @@ byId('blog-form').addEventListener('submit', async event => {
   const button = byId('publish-button');
   const original = button.textContent;
   const content = contentEditor.innerText.trim();
+  const contentHtml = contentEditor.innerHTML;
   if (!content) {
     showStudioMessage('请先填写文章正文。', 'error');
     contentEditor.focus();
+    return;
+  }
+  if (contentHtml.length > 1900000) {
+    showStudioMessage('正文中的图片或附件太多，请移除部分本地文件后再发布。', 'error');
     return;
   }
 
@@ -408,7 +593,7 @@ byId('blog-form').addEventListener('submit', async event => {
       excerpt: byId('excerpt').value.trim(),
       image: byId('image').value.trim(),
       content,
-      contentHtml: contentEditor.innerHTML
+      contentHtml
     };
     const result = await api(id ? `/api/blogs/${encodeURIComponent(id)}` : '/api/blogs', {
       method: id ? 'PUT' : 'POST',
@@ -508,6 +693,9 @@ byId('block-grid').addEventListener('click', event => {
   const block = event.target.closest('[data-block]');
   if (block) insertBlock(block.dataset.block);
 });
+document.querySelectorAll('[data-library-tab]').forEach(tab => {
+  tab.addEventListener('click', () => switchLibraryTab(tab.dataset.libraryTab));
+});
 byId('block-search-input').addEventListener('input', event => {
   const term = event.target.value.trim().toLocaleLowerCase('zh-CN');
   byId('block-grid').querySelectorAll('[data-block]').forEach(block => {
@@ -515,31 +703,97 @@ byId('block-search-input').addEventListener('input', event => {
   });
 });
 
-byId('inline-image-file').addEventListener('change', event => {
+['default-emoji-grid', 'custom-emoji-grid'].forEach(id => {
+  byId(id).addEventListener('click', event => {
+    const button = event.target.closest('[data-emoji]');
+    if (button) insertText(button.dataset.emoji);
+  });
+});
+byId('toggle-custom-emoji').addEventListener('click', () => {
+  const form = byId('custom-emoji-form');
+  const open = form.classList.toggle('hidden') === false;
+  byId('toggle-custom-emoji').setAttribute('aria-expanded', String(open));
+  if (open) byId('custom-emoji-input').focus();
+});
+byId('add-custom-emoji').addEventListener('click', () => {
+  const input = byId('custom-emoji-input');
+  const value = input.value.trim();
+  if (!value) {
+    showStudioMessage('请先粘贴一个表情或短符号。', 'error');
+    input.focus();
+    return;
+  }
+  if (Array.from(value).length > 6) {
+    showStudioMessage('自定义表情请控制在 6 个字符以内。', 'error');
+    input.select();
+    return;
+  }
+  const emojis = readCustomEmojis();
+  if (!emojis.includes(value)) emojis.push(value);
+  saveCustomEmojis(emojis);
+  input.value = '';
+  renderCustomEmojis();
+  showStudioMessage('自定义表情已保存到这台设备。', 'success');
+});
+byId('custom-emoji-input').addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    byId('add-custom-emoji').click();
+  }
+});
+byId('clear-custom-emojis').addEventListener('click', () => {
+  if (!window.confirm('清空这台设备上保存的自定义表情吗？')) return;
+  saveCustomEmojis([]);
+  renderCustomEmojis();
+});
+
+byId('design-grid').addEventListener('click', event => {
+  const button = event.target.closest('[data-design]');
+  if (button) insertDesign(button.dataset.design);
+});
+byId('symbol-picker').addEventListener('click', event => {
+  const button = event.target.closest('[data-symbol]');
+  if (button) insertText(button.dataset.symbol);
+});
+byId('local-file-button').addEventListener('click', () => {
+  saveSelection();
+  byId('local-content-file').click();
+});
+byId('local-content-file').addEventListener('change', async event => {
   const file = event.target.files?.[0];
   event.target.value = '';
   if (!file) return;
-  if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) {
-    showStudioMessage('请选择 JPG、PNG、GIF 或 WebP 图片。', 'error');
-    return;
+  const button = byId('local-file-button');
+  button.disabled = true;
+  try {
+    await insertLocalContentFile(file);
+  } catch (error) {
+    showStudioMessage(error.message, 'error');
+  } finally {
+    button.disabled = false;
   }
-  if (file.size > 700 * 1024) {
-    showStudioMessage('图片超过 700 KB，请压缩后再上传或使用网络图片地址。', 'error');
-    return;
+});
+
+byId('inline-image-file').addEventListener('change', async event => {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  try {
+    await insertInlineImageFile(file);
+    showStudioMessage('本地图片已插入正文。', 'success');
+  } catch (error) {
+    showStudioMessage(error.message, 'error');
   }
-  const reader = new FileReader();
-  reader.addEventListener('load', () => {
-    restoreSelection();
-    runCommand('insertImage', String(reader.result || ''));
-  });
-  reader.addEventListener('error', () => showStudioMessage('无法读取这张图片。', 'error'));
-  reader.readAsDataURL(file);
 });
 
 contentEditor.addEventListener('input', markEditorDirty);
 contentEditor.addEventListener('mouseup', saveSelection);
 contentEditor.addEventListener('keyup', saveSelection);
 contentEditor.addEventListener('focus', saveSelection);
+contentEditor.addEventListener('click', event => {
+  const link = event.target.closest('a');
+  if (link && !event.ctrlKey && !event.metaKey) event.preventDefault();
+});
 byId('title').addEventListener('input', event => {
   resizeTitle();
   if (!slugTouched) {
@@ -635,6 +889,14 @@ window.addEventListener('beforeunload', event => {
 
 document.execCommand('defaultParagraphSeparator', false, 'p');
 document.execCommand('styleWithCSS', false, true);
+renderEmojiGrid('default-emoji-grid', DEFAULT_EMOJIS);
+renderCustomEmojis();
+renderEmojiGrid('symbol-picker', INSERT_SYMBOLS);
+byId('symbol-picker').querySelectorAll('[data-emoji]').forEach(button => {
+  button.dataset.symbol = button.dataset.emoji;
+  delete button.dataset.emoji;
+  button.title = `插入 ${button.dataset.symbol}`;
+});
 resizeTitle();
 updateSlugPreview();
 
