@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { htmlToText, sanitizeBlogHtml } = require('../lib/blogContent');
-const { validateBlog } = require('../api/blogs/index');
+const { optionalImage, validateBlog } = require('../api/blogs/index');
 
 test('keeps the curated insert designs and table structure', () => {
   const input = `
@@ -49,4 +49,15 @@ test('rejects an article body that exceeds the stored rich-content limit', () =>
   });
 
   assert.match(result.error, /图片或附件太多/);
+});
+
+test('keeps the featured image optional instead of assigning a default image', () => {
+  const result = validateBlog({
+    title: '无图文章',
+    slug: 'text-only-post',
+    content: '这是一篇没有特色图片的文章。'
+  });
+
+  assert.equal(result.blog.image, '');
+  assert.equal(optionalImage('/img/default.jpg'), '');
 });

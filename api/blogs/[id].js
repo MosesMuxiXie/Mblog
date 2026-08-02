@@ -1,6 +1,6 @@
 const { requireAdmin } = require('../../lib/blogAdminAuth');
 const { getBlogs, saveBlogs } = require('../../lib/blogStore');
-const { validateBlog } = require('./index');
+const { optionalImage, validateBlog } = require('./index');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -11,7 +11,12 @@ module.exports = async function handler(req, res) {
     const index = blogs.findIndex(blog => blog.id === id || blog.slug === id);
     if (index < 0) return res.status(404).json({ error: '找不到这篇博客' });
 
-    if (req.method === 'GET') return res.status(200).json(blogs[index]);
+    if (req.method === 'GET') {
+      return res.status(200).json({
+        ...blogs[index],
+        image: optionalImage(blogs[index].image)
+      });
+    }
 
     if (req.method === 'PUT') {
       if (!(await requireAdmin(req, res))) return;

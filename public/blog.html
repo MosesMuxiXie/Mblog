@@ -56,18 +56,17 @@
     }
 
     function safeImage(value) {
-      const fallback = '/img/default.jpg';
       const candidate = String(value || '').trim();
-      if (!candidate) return fallback;
+      if (!candidate || candidate === '/img/default.jpg') return '';
       if (/^data:image\/(?:png|jpe?g|gif|webp);base64,[a-z0-9+/=]+$/i.test(candidate)) {
         return candidate;
       }
       if (candidate.startsWith('/') && !candidate.startsWith('//')) return candidate;
       try {
         const parsed = new URL(candidate);
-        return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : fallback;
+        return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '';
       } catch {
-        return fallback;
+        return '';
       }
     }
 
@@ -89,9 +88,11 @@
     }
 
     function renderBlogList() {
-      const list = blogs.map(blog => `
-        <article class="blog-item" data-blog-id="${encodeURIComponent(blog.slug || blog.id)}" tabindex="0">
-          <img src="${escapeHtml(safeImage(blog.image))}" class="blog-thumb" alt="${escapeHtml(t('blog.imageAlt'))}">
+      const list = blogs.map(blog => {
+        const image = safeImage(blog.image);
+        return `
+        <article class="blog-item${image ? '' : ' no-image'}" data-blog-id="${encodeURIComponent(blog.slug || blog.id)}" tabindex="0">
+          ${image ? `<img src="${escapeHtml(image)}" class="blog-thumb" alt="${escapeHtml(t('blog.imageAlt'))}">` : ''}
           <div class="blog-meta">
             <div class="blog-title">${escapeHtml(blog.title)}</div>
             <div class="blog-excerpt">${escapeHtml(blog.excerpt || '')}</div>
@@ -103,8 +104,8 @@
             </div>
           </div>
           <span class="blog-arrow">&rsaquo;</span>
-        </article>
-      `).join('');
+        </article>`;
+      }).join('');
       document.getElementById('blog-list').innerHTML = list || `<p>${escapeHtml(t('blog.noPosts'))}</p>`;
       document.getElementById('blog-list').style.display = '';
       document.getElementById('blog-detail').style.display = 'none';
@@ -115,13 +116,14 @@
       const content = blog.contentFormat === 'html' && blog.contentHtml
         ? blog.contentHtml
         : escapeHtml(blog.content);
+      const image = safeImage(blog.image);
       document.getElementById('blog-detail').innerHTML = `
         <a href="#" id="back-to-articles" style="color:#1976d2;">&larr; ${escapeHtml(t('blog.backToArticles'))}</a>
         <h2 style="margin-top:0.7em;color:#1976d2;">${escapeHtml(blog.title)}</h2>
         <div style="margin-bottom:1em;font-size:1.05em;color:#888;">
           ${formatBlogDate(blog.date)} &nbsp;|&nbsp; ${escapeHtml(blog.author || t('blog.anonymous'))}
         </div>
-        <img src="${escapeHtml(safeImage(blog.image))}" alt="${escapeHtml(t('blog.imageAlt'))}" style="width:100%;max-height:350px;object-fit:cover;border-radius:10px;margin-bottom:1.3em;">
+        ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(t('blog.imageAlt'))}" class="blog-detail-image">` : ''}
         <div class="blog-content">${content}</div>
         <div style="margin-bottom:1.3em;">
           ${(blog.tags || []).map(tag => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join(' ')}

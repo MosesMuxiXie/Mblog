@@ -435,6 +435,7 @@ input:focus, textarea:focus {
   padding: 15px;
   background: rgba(255, 255, 255, .75);
 }
+.post-management-item.no-image { grid-template-columns: minmax(0, 1fr) auto; padding-left: 24px; }
 .post-management-item > img {
   width: 150px;
   height: 108px;
