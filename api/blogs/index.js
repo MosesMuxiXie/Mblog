@@ -7,6 +7,11 @@ function cleanText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
 }
 
+function optionalImage(value) {
+  const image = String(value || '').trim();
+  return image === '/img/default.jpg' ? '' : image;
+}
+
 function cleanTags(value) {
   const tags = Array.isArray(value) ? value : String(value || '').split(',');
   return [...new Set(tags.map(tag => cleanText(tag, 30)).filter(Boolean))].slice(0, 8);
@@ -14,7 +19,7 @@ function cleanTags(value) {
 
 function cleanImage(value) {
   const image = String(value || '').trim();
-  if (!image) return { image: '/img/default.jpg' };
+  if (!image || image === '/img/default.jpg') return { image: '' };
   if (/^data:image\/(?:png|jpe?g|gif|webp);base64,[a-z0-9+/=]+$/i.test(image)) {
     if (image.length > 1800000) return { error: '特色图片处理后仍然过大，请选择更小的图片' };
     return { image };
@@ -65,7 +70,7 @@ module.exports = async function handler(req, res) {
         id: blog.id,
         title: blog.title,
         excerpt: blog.excerpt,
-        image: blog.image,
+        image: optionalImage(blog.image),
         date: blog.date,
         tags: blog.tags,
         author: blog.author,
@@ -111,3 +116,4 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports.validateBlog = validateBlog;
+module.exports.optionalImage = optionalImage;
