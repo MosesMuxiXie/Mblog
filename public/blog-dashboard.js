@@ -87,16 +87,16 @@ function renderCustomEmojis() {
 
 function safeImage(value) {
   const candidate = String(value || '').trim();
-  if (!candidate) return '/img/default.jpg';
+  if (!candidate || candidate === '/img/default.jpg') return '';
   if (/^data:image\/(?:png|jpe?g|gif|webp);base64,[a-z0-9+/=]+$/i.test(candidate)) {
     return candidate;
   }
   if (candidate.startsWith('/') && !candidate.startsWith('//')) return candidate;
   try {
     const parsed = new URL(candidate);
-    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '/img/default.jpg';
+    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '';
   } catch {
-    return '/img/default.jpg';
+    return '';
   }
 }
 
@@ -185,7 +185,7 @@ function updateSlugPreview() {
 }
 
 function updateFeaturedImagePreview(value) {
-  const image = String(value || '').trim();
+  const image = safeImage(value);
   const preview = byId('featured-image-preview');
   const previewImage = preview.querySelector('img');
   byId('image').value = image;
@@ -302,9 +302,10 @@ function renderPosts() {
   list.innerHTML = posts.map(post => {
     const slug = post.slug || post.id;
     const url = `/blog/${encodeURIComponent(slug)}`;
+    const image = safeImage(post.image);
     return `
-      <article class="post-management-item">
-        <img src="${escapeHtml(safeImage(post.image))}" alt="">
+      <article class="post-management-item${image ? '' : ' no-image'}">
+        ${image ? `<img src="${escapeHtml(image)}" alt="">` : ''}
         <div class="post-management-copy">
           <div class="post-management-meta">
             <span>${escapeHtml(post.date || '')}</span>
@@ -341,7 +342,7 @@ async function editPost(id) {
     byId('slug').value = post.slug || post.id;
     byId('tags').value = (post.tags || []).join(', ');
     byId('excerpt').value = post.excerpt || '';
-    updateFeaturedImagePreview(post.image === '/img/default.jpg' ? '' : (post.image || ''));
+    updateFeaturedImagePreview(post.image);
     if (post.contentFormat === 'html' && post.contentHtml) {
       contentEditor.innerHTML = post.contentHtml;
     } else {

@@ -55,6 +55,19 @@
       return node.innerHTML;
     }
 
+    function safeImage(value) {
+      const candidate = String(value || '').trim();
+      if (!candidate || candidate === '/img/default.jpg') return '';
+      if (/^data:image\/(?:png|jpe?g|gif|webp);base64,[a-z0-9+/=]+$/i.test(candidate)) return candidate;
+      if (candidate.startsWith('/') && !candidate.startsWith('//')) return candidate;
+      try {
+        const parsed = new URL(candidate);
+        return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '';
+      } catch {
+        return '';
+      }
+    }
+
     function formatBlogDate(value) {
       const date = new Date(`${value}T00:00:00`);
       return Number.isNaN(date.getTime())
@@ -72,9 +85,11 @@
     }
 
     function renderBlogList() {
-      const list = blogs.map(blog => `
-        <div class="blog-item" data-blog-id="${escapeHtml(blog.id)}">
-          <img src="${escapeHtml(blog.image || '/img/default.jpg')}" class="blog-thumb" alt="${t('blog.imageAlt')}">
+      const list = blogs.map(blog => {
+        const image = safeImage(blog.image);
+        return `
+        <div class="blog-item${image ? '' : ' no-image'}" data-blog-id="${escapeHtml(blog.id)}">
+          ${image ? `<img src="${escapeHtml(image)}" class="blog-thumb" alt="${t('blog.imageAlt')}">` : ''}
           <div class="blog-meta">
             <div class="blog-title">${escapeHtml(blog.title)}</div>
             <div class="blog-excerpt">${escapeHtml(blog.excerpt || '')}</div>
@@ -86,8 +101,8 @@
             </div>
           </div>
           <span class="blog-arrow">&rsaquo;</span>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
       const listElement = document.getElementById('blog-list');
       listElement.innerHTML = list || `<p>${t('blog.noPosts')}</p>`;
       listElement.querySelectorAll('[data-blog-id]').forEach(item => {
@@ -99,13 +114,14 @@
 
     function renderBlogDetail(blog) {
       currentBlog = blog;
+      const image = safeImage(blog.image);
       document.getElementById('blog-detail').innerHTML = `
         <a href="#" id="back-to-articles" style="color:#1976d2;">&larr; ${t('blog.backToArticles')}</a>
         <h2 style="margin-top:0.7em;color:#1976d2;">${escapeHtml(blog.title)}</h2>
         <div style="margin-bottom:1em;font-size:1.05em;color:#888;">
           ${formatBlogDate(blog.date)} &nbsp;|&nbsp; ${escapeHtml(blog.author || t('blog.anonymous'))}
         </div>
-        <img src="${escapeHtml(blog.image || '/img/default.jpg')}" alt="${t('blog.imageAlt')}" style="width:100%;max-height:350px;object-fit:cover;border-radius:10px;margin-bottom:1.3em;">
+        ${image ? `<img src="${escapeHtml(image)}" alt="${t('blog.imageAlt')}" class="blog-detail-image">` : ''}
         <div style="font-size:1.11em;line-height:1.7;margin-bottom:1.9em;white-space:pre-line;">${escapeHtml(blog.content)}</div>
         <div style="margin-bottom:1.3em;">
           ${(blog.tags || []).map(tag => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join(' ')}
