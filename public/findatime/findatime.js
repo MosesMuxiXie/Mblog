@@ -236,7 +236,7 @@ function renderDurationOptions() {
       type="range"
       min="${minimumDuration}"
       max="${maximumDuration}"
-      step="30"
+      step="1"
       value="${state.duration}"
       aria-describedby="duration-hint"
     >
@@ -248,18 +248,71 @@ function renderDurationOptions() {
 
   const slider = byId('duration-range');
   const output = byId('duration-value');
-  const updateSliderPresentation = () => {
+  let snapAnimationFrame = 0;
+  const snapDuration = value => Math.min(
+    maximumDuration,
+    Math.max(minimumDuration, Math.round(value / 30) * 30)
+  );
+  const updateSliderPresentation = (visualDuration = state.duration) => {
     const duration = durationText(state.duration);
-    const progress = ((state.duration - minimumDuration) / (maximumDuration - minimumDuration)) * 100;
+    const progress = ((visualDuration - minimumDuration) / (maximumDuration - minimumDuration)) * 100;
     output.textContent = duration;
     slider.setAttribute('aria-label', t('meetingDuration'));
     slider.setAttribute('aria-valuetext', duration);
     slider.style.setProperty('--duration-progress', `${progress}%`);
   };
 
+  const animateToSnappedDuration = () => {
+    cancelAnimationFrame(snapAnimationFrame);
+    const startValue = Number(slider.value);
+    const targetValue = state.duration;
+    if (startValue === targetValue || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      slider.value = targetValue;
+      updateSliderPresentation();
+      return;
+    }
+
+    const startedAt = performance.now();
+    const animationDuration = 140;
+    const step = now => {
+      const progress = Math.min(1, (now - startedAt) / animationDuration);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const visualDuration = startValue + (targetValue - startValue) * easedProgress;
+      slider.value = visualDuration;
+      updateSliderPresentation(visualDuration);
+      if (progress < 1) snapAnimationFrame = requestAnimationFrame(step);
+    };
+    snapAnimationFrame = requestAnimationFrame(step);
+  };
+
   updateSliderPresentation();
   slider.addEventListener('input', event => {
-    state.duration = Number(event.target.value);
+    cancelAnimationFrame(snapAnimationFrame);
+    const visualDuration = Number(event.target.value);
+    const nextDuration = snapDuration(visualDuration);
+    const durationChanged = nextDuration !== state.duration;
+    state.duration = nextDuration;
+    updateSliderPresentation(visualDuration);
+    if (durationChanged) renderSlots();
+  });
+  slider.addEventListener('change', animateToSnappedDuration);
+  slider.addEventListener('keydown', event => {
+    const direction = {
+      ArrowLeft: -1,
+      ArrowDown: -1,
+      ArrowRight: 1,
+      ArrowUp: 1
+    }[event.key];
+    if (!direction && event.key !== 'Home' && event.key !== 'End') return;
+    event.preventDefault();
+    const nextDuration = event.key === 'Home'
+      ? minimumDuration
+      : event.key === 'End'
+        ? maximumDuration
+        : Math.min(maximumDuration, Math.max(minimumDuration, state.duration + direction * 30));
+    if (nextDuration === state.duration) return;
+    state.duration = nextDuration;
+    slider.value = nextDuration;
     updateSliderPresentation();
     renderSlots();
   });
