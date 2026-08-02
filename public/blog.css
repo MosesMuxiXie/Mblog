@@ -87,6 +87,63 @@ nav a.active, nav a:hover { border-bottom: 2px solid #1976d2; }
   background: #17242c;
 }
 .blog-content a { color: #1976d2; }
+.blog-content .insert-card {
+  margin: 1.45em 0;
+  border-left: 4px solid #257fc0;
+  border-radius: 6px;
+  padding: 1em 1.15em;
+  color: #32414c;
+  background: #edf7ff;
+}
+.blog-content .insert-card-tip { border-left-color: #2e986d; background: #eefaf5; }
+.blog-content .insert-card-warning { border-left-color: #d85b35; background: #fff2ed; }
+.blog-content .insert-card strong { display: block; margin-bottom: .25em; }
+.blog-content .insert-card p:last-child { margin-bottom: 0; }
+.blog-content .insert-table {
+  width: 100%;
+  margin: 1.45em 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.blog-content .insert-table th, .blog-content .insert-table td {
+  border: 1px solid #cfd7dc;
+  padding: .65em .75em;
+  vertical-align: top;
+}
+.blog-content .insert-table th { color: #263846; background: #f0f5f8; text-align: left; }
+.blog-content .insert-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.15em; margin: 1.45em 0; }
+.blog-content .insert-column { min-height: 4.5em; border: 1px solid #d8dfe3; border-radius: 5px; padding: .9em 1em; background: #fbfcfd; }
+.blog-content .insert-column p:last-child { margin-bottom: 0; }
+.blog-content .insert-button {
+  display: inline-block;
+  margin: .4em 0 1.3em;
+  border-radius: 5px;
+  padding: .65em 1.15em;
+  color: #fff;
+  background: #d85832;
+  font-weight: 700;
+  text-decoration: none;
+}
+.blog-content .insert-button:hover { background: #b83e1c; }
+.blog-content .insert-attachment {
+  display: flex;
+  align-items: center;
+  gap: .8em;
+  margin: 1.35em 0;
+  border: 1px solid #d7e0e5;
+  border-radius: 7px;
+  padding: .85em 1em;
+  color: #226a9e;
+  background: #f7fafc;
+  text-decoration: none;
+}
+.blog-content .insert-attachment:hover { border-color: #8bb7d4; background: #f0f8fd; }
+.blog-content .insert-attachment-icon { display: grid; width: 2.4em; height: 2.8em; flex: 0 0 auto; place-items: center; border-radius: 3px; color: #fff; background: #3c7297; font-size: .68em; font-weight: 800; }
+.blog-content .insert-attachment-copy { display: grid; min-width: 0; line-height: 1.4; }
+.blog-content .insert-attachment-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.blog-content .insert-attachment-copy small { color: #77838b; font-size: .76em; }
+.blog-content .insert-date { display: inline-block; margin: .55em 0 1.1em; border: 1px solid #dadddf; border-radius: 999px; padding: .25em .75em; color: #596168; background: #f8f8f8; font-size: .82em; }
+.blog-content .insert-signature { margin: 2.1em 0 1.2em auto; border-top: 1px solid #cfd3d5; padding-top: .55em; color: #596168; text-align: right; }
 @media (max-width: 900px) {
   .container { flex-direction: column; }
   .sidebar, .main { max-width: 100%; }
@@ -95,6 +152,8 @@ nav a.active, nav a:hover { border-bottom: 2px solid #1976d2; }
 @media (max-width: 700px) {
   .blog-item { flex-direction: column; gap: 0.6em; }
   .blog-thumb { width: 98%; height: 170px; }
+  .blog-content .insert-columns { grid-template-columns: 1fr; }
+  .blog-content .insert-table { display: block; overflow-x: auto; }
 }
 @media (max-width: 600px) {
   nav { gap: 0.25em; overflow-x: auto; justify-content: flex-start; padding: 0.35em 0.25em; }
