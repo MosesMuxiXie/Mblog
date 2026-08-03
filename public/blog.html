@@ -56,6 +56,11 @@
   <script>
     let blogs = [];
     let currentBlog = null;
+    let activeReplyId = null;
+    let activeEditId = null;
+    let commentFeedback = null;
+    const COMMENT_TOKEN_KEY = 'mosankai:blog-comment-tokens:v1';
+    const COMMENT_NAME_KEY = 'mosankai:blog-comment-name:v1';
     const t = (key, parameters) => MosankaiI18n.t(key, parameters);
 
     function escapeHtml(value) {
@@ -90,6 +95,190 @@
           }).format(date);
     }
 
+    function formatCommentDate(comment) {
+      const value = comment.createdAt || comment.date;
+      const date = new Date(String(value || '').includes('T') ? value : `${value}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return escapeHtml(value);
+      const options = comment.createdAt
+        ? { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+        : { year: 'numeric', month: 'short', day: 'numeric' };
+      return new Intl.DateTimeFormat(MosankaiI18n.locale(), options).format(date);
+    }
+
+    function loadCommentTokens() {
+      try {
+        const value = JSON.parse(localStorage.getItem(COMMENT_TOKEN_KEY) || '{}');
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+      } catch {
+        return {};
+      }
+    }
+
+    let commentTokens = loadCommentTokens();
+
+    function persistCommentTokens() {
+      try {
+        const recentEntries = Object.entries(commentTokens).slice(-200);
+        commentTokens = Object.fromEntries(recentEntries);
+        localStorage.setItem(COMMENT_TOKEN_KEY, JSON.stringify(commentTokens));
+      } catch {
+        // Keep ownership available for the current page when storage is unavailable.
+      }
+    }
+
+    function rememberCommentToken(commentId, token) {
+      if (!commentId || !token) return;
+      commentTokens[commentId] = token;
+      persistCommentTokens();
+    }
+
+    function forgetCommentToken(commentId) {
+      delete commentTokens[commentId];
+      persistCommentTokens();
+    }
+
+    function storedCommentName() {
+      try {
+        return localStorage.getItem(COMMENT_NAME_KEY) || '';
+      } catch {
+        return '';
+      }
+    }
+
+    function rememberCommentName(name) {
+      try {
+        localStorage.setItem(COMMENT_NAME_KEY, name);
+      } catch {
+        // The comment can still be posted when storage is unavailable.
+      }
+    }
+
+    function commentActions(comment, allowReply) {
+      if (comment.withdrawn) return '';
+      const owned = Boolean(commentTokens[comment.id]);
+      return `
+        <div class="comment-item-actions">
+          ${allowReply ? `<button type="button" class="comment-link-button" data-comment-action="reply" data-comment-id="${escapeHtml(comment.id)}">${escapeHtml(t(activeReplyId === comment.id ? 'blog.cancel' : 'blog.reply'))}</button>` : ''}
+          ${owned ? `<button type="button" class="comment-link-button" data-comment-action="edit" data-comment-id="${escapeHtml(comment.id)}">${escapeHtml(t(activeEditId === comment.id ? 'blog.cancel' : 'blog.edit'))}</button>` : ''}
+          ${owned ? `<button type="button" class="comment-link-button danger" data-comment-action="withdraw" data-comment-id="${escapeHtml(comment.id)}">${escapeHtml(t('blog.withdraw'))}</button>` : ''}
+        </div>`;
+    }
+
+    function editForm(comment) {
+      if (activeEditId !== comment.id) return '';
+      return `
+        <form class="comment-inline-form edit-comment-form" data-comment-id="${escapeHtml(comment.id)}">
+          <label for="edit-comment-${escapeHtml(comment.id)}">${escapeHtml(t('blog.editComment'))}</label>
+          <textarea id="edit-comment-${escapeHtml(comment.id)}" maxlength="2000" required>${escapeHtml(comment.text)}</textarea>
+          <div class="comment-form-actions">
+            <button type="button" class="comment-secondary-button" data-comment-action="cancel">${escapeHtml(t('blog.cancel'))}</button>
+            <button type="submit" class="comment-primary-button">${escapeHtml(t('blog.saveEdit'))}</button>
+          </div>
+        </form>`;
+    }
+
+    function replyForm(comment) {
+      if (activeReplyId !== comment.id) return '';
+      return `
+        <form class="comment-inline-form reply-comment-form" data-parent-id="${escapeHtml(comment.id)}">
+          <label>${escapeHtml(t('blog.replyTo', { name: comment.name }))}</label>
+          <input name="name" type="text" maxlength="40" value="${escapeHtml(storedCommentName())}" placeholder="${escapeHtml(t('blog.yourName'))}" required>
+          <textarea name="text" maxlength="2000" placeholder="${escapeHtml(t('blog.yourReply'))}" required></textarea>
+          <div class="comment-form-actions">
+            <button type="button" class="comment-secondary-button" data-comment-action="cancel">${escapeHtml(t('blog.cancel'))}</button>
+            <button type="submit" class="comment-primary-button">${escapeHtml(t('blog.postReply'))}</button>
+          </div>
+        </form>`;
+    }
+
+    function commentMarkup(comment, replies = [], isReply = false) {
+      const edited = comment.updatedAt && !comment.withdrawn
+        ? `<span class="comment-edited">${escapeHtml(t('blog.edited'))}</span>`
+        : '';
+      const body = comment.withdrawn
+        ? `<p class="comment-text withdrawn">${escapeHtml(t('blog.commentWithdrawn'))}</p>`
+        : `<p class="comment-text">${escapeHtml(comment.text)}</p>`;
+      return `
+        <article class="comment-item${isReply ? ' comment-reply' : ''}" data-comment-id="${escapeHtml(comment.id)}">
+          <header class="comment-header">
+            <strong>${escapeHtml(comment.name || t('blog.anonymous'))}</strong>
+            <span><time>${escapeHtml(formatCommentDate(comment))}</time>${edited}</span>
+          </header>
+          ${body}
+          ${commentActions(comment, !isReply)}
+          ${editForm(comment)}
+          ${!isReply && replies.length ? `<div class="comment-replies">${replies.map(reply => commentMarkup(reply, [], true)).join('')}</div>` : ''}
+          ${!isReply ? replyForm(comment) : ''}
+        </article>`;
+    }
+
+    function commentsMarkup(comments) {
+      if (!comments.length) return `<p class="comments-empty">${escapeHtml(t('blog.noComments'))}</p>`;
+      const ids = new Set(comments.map(comment => comment.id));
+      const replies = new Map();
+      comments.filter(comment => comment.parentId && ids.has(comment.parentId)).forEach(comment => {
+        if (!replies.has(comment.parentId)) replies.set(comment.parentId, []);
+        replies.get(comment.parentId).push(comment);
+      });
+      return comments
+        .filter(comment => !comment.parentId || !ids.has(comment.parentId))
+        .map(comment => commentMarkup(comment, replies.get(comment.id) || []))
+        .join('');
+    }
+
+    function feedbackMarkup() {
+      if (!commentFeedback) return '';
+      const message = commentFeedback.key
+        ? t(commentFeedback.key, commentFeedback.parameters)
+        : commentFeedback.message;
+      return escapeHtml(message || '');
+    }
+
+    function commentErrorKey(code) {
+      const keys = {
+        emptyComment: 'blog.emptyComment',
+        invalidReplyTarget: 'blog.invalidReplyTarget',
+        notCommentOwner: 'blog.notCommentOwner',
+        commentNotFound: 'blog.commentNotFound',
+        commentSaveFailed: 'blog.commentSaveFailed'
+      };
+      return keys[code] || null;
+    }
+
+    async function commentRequest(method, body) {
+      const response = await fetch(`/api/blogs/${encodeURIComponent(currentBlog.id)}/comments`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(result.error || t('blog.commentSaveFailed'));
+        error.translationKey = commentErrorKey(result.code);
+        throw error;
+      }
+      return result;
+    }
+
+    function applyCommentResult(result, feedbackKey) {
+      currentBlog = { ...currentBlog, comments: result.comments || currentBlog.comments };
+      activeReplyId = null;
+      activeEditId = null;
+      commentFeedback = { key: feedbackKey, error: false };
+      renderBlogDetail(currentBlog, false);
+    }
+
+    function showCommentError(error) {
+      commentFeedback = error.translationKey
+        ? { key: error.translationKey, error: true }
+        : { message: error.message, error: true };
+      const feedback = document.getElementById('comment-feedback');
+      if (feedback) {
+        feedback.className = 'comment-feedback error';
+        feedback.textContent = error.translationKey ? t(error.translationKey) : error.message;
+      }
+    }
+
     async function fetchBlogs() {
       const response = await fetch('/api/blogs');
       if (!response.ok) throw new Error('Unable to load articles.');
@@ -121,6 +310,11 @@
     }
 
     function renderBlogDetail(blog, updateHistory = false) {
+      if (currentBlog && currentBlog.id !== blog.id) {
+        activeReplyId = null;
+        activeEditId = null;
+        commentFeedback = null;
+      }
       currentBlog = blog;
       const content = blog.contentFormat === 'html' && blog.contentHtml
         ? blog.contentHtml
@@ -137,22 +331,25 @@
         <div style="margin-bottom:1.3em;">
           ${(blog.tags || []).map(tag => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join(' ')}
         </div>
-        <div style="margin:2em 0 1em 0;">
-          <h3 style="color:#1976d2;margin-bottom:0.5em;">${escapeHtml(t('blog.comments'))}</h3>
-          <div id="comments">
-            ${(blog.comments || []).map(comment => `
-              <div style="border-bottom:1px solid #eee;padding:0.5em 0;">
-                <b>${escapeHtml(comment.name)}</b> <span style="color:#888;font-size:0.92em;">(${formatBlogDate(comment.date)})</span><br>
-                <div style="margin-top:0.2em;white-space:pre-wrap;">${escapeHtml(comment.text)}</div>
-              </div>
-            `).join('') || `<div style="color:#888;">${escapeHtml(t('blog.noComments'))}</div>`}
+        <section class="comments-section" aria-labelledby="comments-title">
+          <div class="comments-heading">
+            <h3 id="comments-title">${escapeHtml(t('blog.comments'))}</h3>
+            <span class="comment-count">${escapeHtml((blog.comments || []).length === 1
+              ? t('blog.oneComment')
+              : t('blog.commentCount', { count: (blog.comments || []).length }))}</span>
           </div>
-          <form id="comment-form" style="margin-top:1em;">
-            <input type="text" id="c-name" placeholder="${escapeHtml(t('blog.yourName'))}" required style="width:45%;padding:0.6em;margin-right:1em;">
-            <textarea id="c-text" placeholder="${escapeHtml(t('blog.yourComment'))}" required style="width:98%;min-height:66px;padding:0.7em;margin:0.45em 0;"></textarea>
-            <button type="submit" style="background:#1976d2;color:#fff;padding:0.6em 1.7em;border:none;border-radius:7px;font-size:1em;">${escapeHtml(t('blog.postComment'))}</button>
+          <p class="comments-hint">${escapeHtml(t('blog.commentsHint'))}</p>
+          <div id="comment-feedback" class="comment-feedback${commentFeedback?.error ? ' error' : ''}" aria-live="polite">${feedbackMarkup()}</div>
+          <div id="comments" class="comments-list">${commentsMarkup(blog.comments || [])}</div>
+          <form id="comment-form" class="comment-composer">
+            <label for="c-text">${escapeHtml(t('blog.addComment'))}</label>
+            <input type="text" id="c-name" maxlength="40" value="${escapeHtml(storedCommentName())}" placeholder="${escapeHtml(t('blog.yourName'))}" required>
+            <textarea id="c-text" maxlength="2000" placeholder="${escapeHtml(t('blog.yourComment'))}" required></textarea>
+            <div class="comment-form-actions">
+              <button type="submit" class="comment-primary-button">${escapeHtml(t('blog.postComment'))}</button>
+            </div>
           </form>
-        </div>
+        </section>
       `;
       document.getElementById('blog-list').style.display = 'none';
       document.getElementById('blog-detail').style.display = '';
@@ -171,24 +368,120 @@
         event.preventDefault();
         const name = document.getElementById('c-name').value.trim();
         const text = document.getElementById('c-text').value.trim();
-        if (!name || !text) return;
-        const response = await fetch(`/api/blogs/${encodeURIComponent(blog.id)}/comments`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, text })
-        });
-        if (!response.ok) {
-          const result = await response.json().catch(() => ({}));
-          alert(result.error || 'Unable to post this comment.');
+        if (!name || !text) {
+          const error = new Error(t('blog.emptyComment'));
+          error.translationKey = 'blog.emptyComment';
+          showCommentError(error);
           return;
         }
-        showBlog(blog.slug || blog.id, false);
+        const submitButton = event.submitter || event.currentTarget.querySelector('[type="submit"]');
+        submitButton.disabled = true;
+        try {
+          const result = await commentRequest('POST', { name, text });
+          rememberCommentName(name);
+          rememberCommentToken(result.comment?.id, result.editToken);
+          applyCommentResult(result, 'blog.commentPosted');
+        } catch (error) {
+          showCommentError(error);
+          submitButton.disabled = false;
+        }
+      });
+
+      document.getElementById('comments').addEventListener('click', async event => {
+        const button = event.target.closest('[data-comment-action]');
+        if (!button) return;
+        const action = button.dataset.commentAction;
+        const commentId = button.dataset.commentId;
+        if (action === 'cancel') {
+          activeReplyId = null;
+          activeEditId = null;
+          renderBlogDetail(currentBlog, false);
+          return;
+        }
+        if (action === 'reply') {
+          activeReplyId = activeReplyId === commentId ? null : commentId;
+          activeEditId = null;
+          renderBlogDetail(currentBlog, false);
+          requestAnimationFrame(() => document.querySelector('.reply-comment-form textarea')?.focus());
+          return;
+        }
+        if (action === 'edit') {
+          activeEditId = activeEditId === commentId ? null : commentId;
+          activeReplyId = null;
+          renderBlogDetail(currentBlog, false);
+          requestAnimationFrame(() => document.querySelector('.edit-comment-form textarea')?.focus());
+          return;
+        }
+        if (action === 'withdraw' && confirm(t('blog.confirmWithdraw'))) {
+          button.disabled = true;
+          try {
+            const result = await commentRequest('DELETE', {
+              commentId,
+              editToken: commentTokens[commentId]
+            });
+            forgetCommentToken(commentId);
+            applyCommentResult(result, 'blog.commentRemoved');
+          } catch (error) {
+            showCommentError(error);
+            button.disabled = false;
+          }
+        }
+      });
+
+      document.getElementById('comments').addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.target;
+        const submitButton = event.submitter || form.querySelector('[type="submit"]');
+        submitButton.disabled = true;
+        try {
+          if (form.matches('.reply-comment-form')) {
+            const name = form.elements.name.value.trim();
+            const text = form.elements.text.value.trim();
+            if (!name || !text) {
+              submitButton.disabled = false;
+              const error = new Error(t('blog.emptyComment'));
+              error.translationKey = 'blog.emptyComment';
+              showCommentError(error);
+              return;
+            }
+            const result = await commentRequest('POST', {
+              name,
+              text,
+              parentId: form.dataset.parentId
+            });
+            rememberCommentName(name);
+            rememberCommentToken(result.comment?.id, result.editToken);
+            applyCommentResult(result, 'blog.replyPosted');
+          } else if (form.matches('.edit-comment-form')) {
+            const commentId = form.dataset.commentId;
+            const text = form.querySelector('textarea').value.trim();
+            if (!text) {
+              submitButton.disabled = false;
+              const error = new Error(t('blog.emptyComment'));
+              error.translationKey = 'blog.emptyComment';
+              showCommentError(error);
+              return;
+            }
+            const result = await commentRequest('PATCH', {
+              commentId,
+              text,
+              editToken: commentTokens[commentId]
+            });
+            applyCommentResult(result, 'blog.editSaved');
+          }
+        } catch (error) {
+          showCommentError(error);
+          submitButton.disabled = false;
+        }
       });
     }
 
     async function showList(updateHistory = true) {
       await fetchBlogs();
       currentBlog = null;
+      activeReplyId = null;
+      activeEditId = null;
+      commentFeedback = null;
       renderBlogList();
       if (updateHistory && window.location.pathname !== '/blog') {
         history.pushState({ view: 'list' }, '', '/blog');

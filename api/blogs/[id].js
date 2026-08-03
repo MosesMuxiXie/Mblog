@@ -1,4 +1,5 @@
 const { requireAdmin } = require('../../lib/blogAdminAuth');
+const { publicComments } = require('../../lib/blogComments');
 const { getBlogs, saveBlogs } = require('../../lib/blogStore');
 const { optionalImage, validateBlog } = require('./index');
 
@@ -14,7 +15,8 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
       return res.status(200).json({
         ...blogs[index],
-        image: optionalImage(blogs[index].image)
+        image: optionalImage(blogs[index].image),
+        comments: publicComments(blogs[index].comments)
       });
     }
 

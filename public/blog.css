@@ -146,6 +146,43 @@ nav a.active, nav a:hover { border-bottom: 2px solid #1976d2; }
 .blog-content .insert-attachment-copy small { color: #77838b; font-size: .76em; }
 .blog-content .insert-date { display: inline-block; margin: .55em 0 1.1em; border: 1px solid #dadddf; border-radius: 999px; padding: .25em .75em; color: #596168; background: #f8f8f8; font-size: .82em; }
 .blog-content .insert-signature { margin: 2.1em 0 1.2em auto; border-top: 1px solid #cfd3d5; padding-top: .55em; color: #596168; text-align: right; }
+.comments-section { margin: 2.3em 0 1em; border-top: 1px solid #e7edf2; padding-top: 1.7em; }
+.comments-heading { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+.comments-heading h3 { margin: 0; color: #1976d2; }
+.comment-count { border-radius: 999px; padding: .2em .7em; color: #52616c; background: #edf3f7; font-size: .78em; }
+.comments-hint { margin: .45em 0 1.2em; color: #6d7780; font-size: .86em; }
+.comment-feedback { min-height: 1.4em; margin-bottom: .4em; color: #237552; font-size: .88em; }
+.comment-feedback.error { color: #b13a35; }
+.comments-list { display: grid; gap: .9em; }
+.comments-empty { margin: 0; border: 1px dashed #cad5dd; border-radius: 10px; padding: 1.3em; color: #77838b; text-align: center; }
+.comment-item { border: 1px solid #e1e8ed; border-radius: 11px; padding: .9em 1em; background: #fff; }
+.comment-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1em; }
+.comment-header strong { color: #244b66; overflow-wrap: anywhere; }
+.comment-header time { color: #7a8790; font-size: .78em; }
+.comment-edited { margin-left: .55em; color: #8b969d; font-size: .72em; }
+.comment-text { margin: .55em 0; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+.comment-text.withdrawn { color: #89949b; font-style: italic; }
+.comment-item-actions { display: flex; flex-wrap: wrap; gap: .9em; margin-top: .55em; }
+.comment-link-button { border: 0; padding: 0; color: #1976d2; background: transparent; cursor: pointer; font: inherit; font-size: .82em; }
+.comment-link-button:hover { text-decoration: underline; }
+.comment-link-button.danger { color: #bd3c37; }
+.comment-link-button:disabled, .comment-primary-button:disabled { opacity: .55; cursor: wait; }
+.comment-replies { display: grid; gap: .7em; margin: .9em 0 0 1.2em; border-left: 3px solid #dce8f1; padding-left: .9em; }
+.comment-reply { border: 0; border-radius: 8px; padding: .75em .85em; background: #f7fafc; }
+.comment-composer, .comment-inline-form { display: grid; gap: .65em; }
+.comment-composer { margin-top: 1.25em; border-radius: 11px; padding: 1em; background: #f5f9fc; }
+.comment-composer label, .comment-inline-form label { color: #31536b; font-weight: 650; }
+.comment-composer input, .comment-composer textarea, .comment-inline-form input, .comment-inline-form textarea {
+  box-sizing: border-box; width: 100%; border: 1px solid #c8d4dc; border-radius: 7px; padding: .7em .8em; color: inherit; background: #fff; font: inherit;
+}
+.comment-composer textarea, .comment-inline-form textarea { min-height: 82px; resize: vertical; }
+.comment-composer input:focus, .comment-composer textarea:focus, .comment-inline-form input:focus, .comment-inline-form textarea:focus { outline: 3px solid #d8ebfa; border-color: #4b93c9; }
+.comment-inline-form { margin-top: .9em; border-top: 1px solid #e4eaee; padding-top: .9em; }
+.comment-form-actions { display: flex; justify-content: flex-end; gap: .65em; }
+.comment-primary-button, .comment-secondary-button { border-radius: 7px; padding: .55em 1.1em; font: inherit; cursor: pointer; }
+.comment-primary-button { border: 1px solid #1976d2; color: #fff; background: #1976d2; }
+.comment-primary-button:hover { background: #0f65b8; }
+.comment-secondary-button { border: 1px solid #b9c7d0; color: #53646f; background: #fff; }
 @media (max-width: 900px) {
   .container { flex-direction: column; }
   .sidebar, .main { max-width: 100%; }
@@ -161,4 +198,7 @@ nav a.active, nav a:hover { border-bottom: 2px solid #1976d2; }
   nav { gap: 0.25em; overflow-x: auto; justify-content: flex-start; padding: 0.35em 0.25em; }
   nav a { flex: 0 0 auto; padding-right: 0.55em; padding-left: 0.55em; }
   .blog-list { margin: 1.2em 0.3em; }
+  #blog-detail { box-sizing: border-box; width: 100%; padding: 0 .8em; }
+  .comment-header { align-items: flex-start; flex-direction: column; gap: .2em; }
+  .comment-replies { margin-left: .25em; padding-left: .65em; }
 }
