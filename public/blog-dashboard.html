@@ -37,6 +37,9 @@
         <button class="side-nav-item" type="button" data-new-post>
           <span>✦</span> 新建文章
         </button>
+        <button class="side-nav-item" type="button" data-panel="site-panel">
+          <span>▧</span> 网站封面
+        </button>
         <button class="side-nav-item" type="button" data-panel="account-panel">
           <span>⌁</span> 账号安全
         </button>
@@ -85,6 +88,49 @@
         </div>
         <div id="post-list" class="post-library-grid" aria-live="polite">
           <div class="empty-state">正在读取文章…</div>
+        </div>
+      </section>
+
+      <section id="site-panel" class="dashboard-panel hidden">
+        <div class="site-settings-layout">
+          <article class="cover-settings-card">
+            <div class="section-heading cover-settings-heading">
+              <div>
+                <span class="eyebrow ink">HOMEPAGE APPEARANCE</span>
+                <h2>网站封面</h2>
+                <p>替换 mosankai.com 首页主标题背后的封面图片。</p>
+              </div>
+              <a class="secondary-button small" href="/" target="_blank" rel="noopener">查看首页 ↗</a>
+            </div>
+
+            <div id="homepage-cover-preview" class="homepage-cover-preview">
+              <img src="/img/m48a5_patton_cn.jpg" alt="网站封面预览">
+              <div class="homepage-cover-shade" aria-hidden="true"></div>
+              <strong aria-hidden="true">MOSANKAI</strong>
+              <span id="homepage-cover-status">当前使用默认封面</span>
+            </div>
+
+            <input id="homepage-cover-file" type="file"
+              accept="image/png,image/jpeg,image/webp" hidden>
+            <div class="homepage-cover-actions">
+              <label id="homepage-cover-file-button" class="primary-button cover-upload-button"
+                for="homepage-cover-file">从本地选择图片</label>
+              <button id="save-homepage-cover" class="primary-button" type="button" disabled>保存并应用</button>
+              <button id="restore-homepage-cover" class="secondary-button" type="button" disabled>恢复默认封面</button>
+            </div>
+            <div id="homepage-cover-message" class="form-message" role="alert" aria-live="polite"></div>
+            <p class="cover-upload-hint">支持 JPG、PNG、WebP，原图最大 12 MB。图片会自动缩放、压缩并以居中裁切的方式显示；推荐使用横向图片。</p>
+          </article>
+
+          <aside class="cover-guidance">
+            <span class="eyebrow ink">COVER NOTES</span>
+            <h3>选择封面的小建议</h3>
+            <ol>
+              <li><span>01</span><p><strong>使用横图</strong>建议比例约为 16:9，电脑与手机都更容易保留主体。</p></li>
+              <li><span>02</span><p><strong>留出中心区域</strong>首页中央会显示 MOSANKAI，避免把重要细节放在正中。</p></li>
+              <li><span>03</span><p><strong>保存后立即生效</strong>重新打开首页即可看到新的封面。</p></li>
+            </ol>
+          </aside>
         </div>
       </section>
 

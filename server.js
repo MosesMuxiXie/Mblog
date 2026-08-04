@@ -56,6 +56,7 @@ app.all('/api/findatime', require('./api/findatime/index'));
 app.all('/api/findatime/:id', require('./api/findatime/[id]'));
 app.all('/api/blogs/admin/auth', require('./api/blogs/admin/auth'));
 app.all('/api/blogs/admin/credentials', require('./api/blogs/admin/credentials'));
+app.all('/api/site-settings', require('./api/site-settings'));
 app.all('/api/blogs', require('./api/blogs/index'));
 app.all('/api/blogs/:id/comments', require('./api/blogs/[id]/comments'));
 app.all('/api/blogs/:id', require('./api/blogs/[id]'));

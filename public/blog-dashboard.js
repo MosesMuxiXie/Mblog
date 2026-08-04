@@ -5,6 +5,8 @@ let posts = [];
 let editorDirty = false;
 let slugTouched = false;
 let savedSelection = null;
+let homepageCoverImage = '';
+let homepageCoverDirty = false;
 
 const DEFAULT_EMOJIS = [
   '😀', '😄', '😂', '🥹', '😍', '🤔', '😎',
@@ -156,6 +158,7 @@ function showPanel(panelId) {
   document.body.classList.toggle('editor-mode', editorMode);
   const headings = {
     'posts-panel': '文章管理',
+    'site-panel': '网站封面',
     'account-panel': '账号安全'
   };
   if (!editorMode) byId('page-heading').textContent = headings[panelId] || '博客后台';
@@ -241,6 +244,52 @@ async function optimizedFeaturedImage(file) {
   }
   if (output.length > 1700000) throw new Error('图片处理后仍然过大，请换一张尺寸更小的图片');
   return output;
+}
+
+async function optimizedHomepageCover(file) {
+  const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+  if (!allowed.includes(file.type)) throw new Error('请选择 JPG、PNG 或 WebP 图片');
+  if (file.size > 12 * 1024 * 1024) throw new Error('原始图片不能超过 12 MB');
+
+  const source = await fileDataUrl(file);
+  const image = await loadImageSource(source);
+  const scale = Math.min(1, 1920 / image.naturalWidth, 1200 / image.naturalHeight);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+  let output = canvas.toDataURL('image/webp', .84);
+
+  if (output.length > 1800000) output = canvas.toDataURL('image/webp', .68);
+  if (output.length > 1800000) {
+    const secondScale = Math.min(1, 1440 / canvas.width, 900 / canvas.height);
+    const smaller = document.createElement('canvas');
+    smaller.width = Math.max(1, Math.round(canvas.width * secondScale));
+    smaller.height = Math.max(1, Math.round(canvas.height * secondScale));
+    smaller.getContext('2d').drawImage(canvas, 0, 0, smaller.width, smaller.height);
+    output = smaller.toDataURL('image/webp', .7);
+  }
+  if (output.length > 1850000) throw new Error('图片处理后仍然过大，请换一张尺寸更小的图片');
+  return output;
+}
+
+function updateHomepageCoverPreview(value, isDefault = false) {
+  const coverImage = safeImage(value) || '/img/m48a5_patton_cn.jpg';
+  homepageCoverImage = isDefault ? '' : coverImage;
+  byId('homepage-cover-preview').querySelector('img').src = coverImage;
+  byId('homepage-cover-status').textContent = isDefault ? '当前使用默认封面' : '当前使用自定义封面';
+  byId('restore-homepage-cover').disabled = isDefault;
+}
+
+async function loadSiteSettings() {
+  try {
+    const settings = await api('/api/site-settings');
+    updateHomepageCoverPreview(settings.coverImage, settings.isDefault);
+    homepageCoverDirty = false;
+    byId('save-homepage-cover').disabled = true;
+  } catch (error) {
+    setMessage('homepage-cover-message', error.message, 'error');
+  }
 }
 
 function resizeTitle() {
@@ -656,6 +705,74 @@ byId('credentials-form').addEventListener('submit', async event => {
   }
 });
 
+byId('homepage-cover-file').addEventListener('change', async event => {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+
+  const label = byId('homepage-cover-file-button');
+  const original = label.textContent;
+  label.textContent = '正在处理图片…';
+  label.classList.add('disabled');
+  setMessage('homepage-cover-message');
+  try {
+    const image = await optimizedHomepageCover(file);
+    updateHomepageCoverPreview(image, false);
+    homepageCoverDirty = true;
+    byId('save-homepage-cover').disabled = false;
+    setMessage('homepage-cover-message', '图片已处理，请点击“保存并应用”。', 'success');
+  } catch (error) {
+    setMessage('homepage-cover-message', error.message, 'error');
+  } finally {
+    label.textContent = original;
+    label.classList.remove('disabled');
+  }
+});
+
+byId('save-homepage-cover').addEventListener('click', async event => {
+  if (!homepageCoverImage || !homepageCoverDirty) return;
+  const button = event.currentTarget;
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = '正在保存…';
+  setMessage('homepage-cover-message');
+  try {
+    const settings = await api('/api/site-settings', {
+      method: 'PUT',
+      body: JSON.stringify({ coverImage: homepageCoverImage })
+    });
+    updateHomepageCoverPreview(settings.coverImage, settings.isDefault);
+    homepageCoverDirty = false;
+    setMessage('homepage-cover-message', '网站封面已更新，重新打开首页即可查看。', 'success');
+  } catch (error) {
+    button.disabled = false;
+    setMessage('homepage-cover-message', error.message, 'error');
+  } finally {
+    button.textContent = original;
+  }
+});
+
+byId('restore-homepage-cover').addEventListener('click', async event => {
+  if (!window.confirm('恢复为网站原来的默认封面吗？')) return;
+  const button = event.currentTarget;
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = '正在恢复…';
+  setMessage('homepage-cover-message');
+  try {
+    const settings = await api('/api/site-settings', { method: 'DELETE' });
+    updateHomepageCoverPreview(settings.coverImage, settings.isDefault);
+    homepageCoverDirty = false;
+    byId('save-homepage-cover').disabled = true;
+    setMessage('homepage-cover-message', '已恢复默认网站封面。', 'success');
+  } catch (error) {
+    button.disabled = false;
+    setMessage('homepage-cover-message', error.message, 'error');
+  } finally {
+    button.textContent = original;
+  }
+});
+
 document.querySelectorAll('[data-panel]').forEach(button => {
   button.addEventListener('click', () => showPanel(button.dataset.panel));
 });
@@ -883,7 +1000,8 @@ window.addEventListener('resize', () => {
   if (window.innerWidth > 1050) closeStudioPanels();
 });
 window.addEventListener('beforeunload', event => {
-  if (!document.body.classList.contains('editor-mode') || !editorDirty) return;
+  const unsavedArticle = document.body.classList.contains('editor-mode') && editorDirty;
+  if (!unsavedArticle && !homepageCoverDirty) return;
   event.preventDefault();
   event.returnValue = '';
 });
@@ -912,6 +1030,6 @@ api('/api/blogs/admin/auth')
     byId('default-password-warning').classList.toggle('hidden', !status.usingDefaultPassword);
     byId('dashboard-loading').classList.add('hidden');
     byId('dashboard-app').classList.remove('hidden');
-    await loadPosts();
+    await Promise.all([loadPosts(), loadSiteSettings()]);
   })
   .catch(() => window.location.replace('/blog/admin'));

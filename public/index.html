@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-2T9L9PF3P5"></script>
@@ -7,25 +7,124 @@
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-2T9L9PF3P5');
+    document.documentElement.classList.add('js');
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Mosankai — find a time or open the blog." data-i18n-content="home.description">
-  <title data-i18n="home.title">Mosankai</title>
+  <meta name="theme-color" content="#080a08">
+  <meta name="description" content="MOSANKAI — Mos_X 的个人网站、博客与约时间工具。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mosankai.com/">
+  <meta property="og:title" content="MOSANKAI">
+  <meta property="og:description" content="Mos_X 的个人网站、博客与约时间工具。">
+  <meta property="og:image" content="https://mosankai.com/og.png">
+  <meta property="og:image:alt" content="MOSANKAI">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MOSANKAI">
+  <meta name="twitter:description" content="Mos_X 的个人网站、博客与约时间工具。">
+  <meta name="twitter:image" content="https://mosankai.com/og.png">
+  <title>MOSANKAI</title>
   <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="preconnect" href="https://cdn.simpleicons.org">
   <link rel="stylesheet" href="/home.css">
-  <link rel="stylesheet" href="/i18n.css">
-  <script src="/i18n.js"></script>
+  <script src="/home.js" defer></script>
 </head>
 <body>
-  <main class="landing">
-    <h1>MOSANKAI</h1>
-    <nav aria-label="Main navigation" data-i18n-aria-label="home.navigation">
-      <a href="/findatime" data-i18n="home.findatime">FIND A TIME</a>
-      <a href="/blog" data-i18n="home.blog">BLOG</a>
+  <header class="site-controls">
+    <button class="menu-toggle" type="button" aria-controls="site-drawer" aria-expanded="false">
+      <span class="menu-toggle__icon" aria-hidden="true"><i></i><i></i></span>
+      <span>目录</span>
+    </button>
+
+    <nav class="social-links" aria-label="作者的社交主页">
+      <a href="https://github.com/MosesMuxiXie" target="_blank" rel="noopener noreferrer" aria-label="前往 Mos_X 的 GitHub 主页">
+        <img src="https://cdn.simpleicons.org/github/FFFFFF" alt="" width="22" height="22">
+      </a>
+      <a href="https://space.bilibili.com/1943001386?spm_id_from=333.1007.0.0" target="_blank" rel="noopener noreferrer" aria-label="前往 Mos_X 的哔哩哔哩主页">
+        <img src="https://cdn.simpleicons.org/bilibili/FFFFFF" alt="" width="24" height="24">
+      </a>
     </nav>
+  </header>
+
+  <div class="drawer-backdrop" data-close-drawer></div>
+  <aside class="site-drawer" id="site-drawer" aria-hidden="true">
+    <div class="site-drawer__header">
+      <span class="site-drawer__eyebrow">MOSANKAI / MENU</span>
+      <button class="drawer-close" type="button" aria-label="关闭目录" data-close-drawer>×</button>
+    </div>
+    <nav class="site-drawer__nav" aria-label="站点目录">
+      <a href="/blog">
+        <span class="nav-index">01</span>
+        <span>博客</span>
+        <span aria-hidden="true">↗</span>
+      </a>
+      <a href="/findatime">
+        <span class="nav-index">02</span>
+        <span>约时间</span>
+        <span aria-hidden="true">↗</span>
+      </a>
+    </nav>
+    <p class="site-drawer__footer">Personal site of Mos_X</p>
+  </aside>
+
+  <main class="page-stack">
+    <section class="panel hero" id="home" data-panel>
+      <div class="hero__grid" aria-hidden="true"></div>
+      <div class="hero__content">
+        <h1>MOSANKAI</h1>
+      </div>
+      <a class="scroll-cue" href="#who" aria-label="向下滚动，了解 MOSANKAI">
+        <span>向下滚动</span>
+        <i aria-hidden="true"></i>
+      </a>
+      <p class="hero__coordinate" aria-hidden="true">39.9042° N<br>116.4074° E</p>
+    </section>
+
+    <section class="panel qa-panel" id="who" data-panel>
+      <div class="qa-panel__number" aria-hidden="true">01</div>
+      <div class="qa-card reveal">
+        <p class="qa-card__label">ABOUT / 01</p>
+        <h2>这是谁的网站？</h2>
+        <div class="qa-card__rule" aria-hidden="true"></div>
+        <p>这个网站是 Mos_X 的个人网站，他目前是一位高中生。他是一个军事爱好者、二次元爱好者和半个开发者（其实就不是）。</p>
+      </div>
+    </section>
+
+    <section class="panel qa-panel qa-panel--reverse" id="features" data-panel>
+      <div class="qa-panel__number" aria-hidden="true">02</div>
+      <div class="qa-card reveal">
+        <p class="qa-card__label">FUNCTION / 02</p>
+        <h2>这个网站有什么功能？</h2>
+        <div class="qa-card__rule" aria-hidden="true"></div>
+        <p>目前这个网站有两大模块：约时间和博客。博客的主要内容是由作者决定想要发什么内容，随机更新。约时间则是一个可以用来给大家找时间来约着一起出去玩，并快速排除哪些时间不能去的网站。</p>
+        <div class="qa-card__links">
+          <a href="/blog">浏览博客 <span aria-hidden="true">↗</span></a>
+          <a href="/findatime">开始约时间 <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel qa-panel" id="contact" data-panel>
+      <div class="qa-panel__number" aria-hidden="true">03</div>
+      <div class="qa-card reveal">
+        <p class="qa-card__label">CONTACT / 03</p>
+        <h2>我可以在哪里找到作者？</h2>
+        <div class="qa-card__rule" aria-hidden="true"></div>
+        <p>你可以通过右上角的几个标识选择进入作者的主页并给予他一些支持。</p>
+      </div>
+    </section>
+
+    <section class="panel qa-panel qa-panel--final" id="support" data-panel>
+      <div class="qa-panel__number" aria-hidden="true">04</div>
+      <div class="qa-card reveal">
+        <p class="qa-card__label">SUPPORT / 04</p>
+        <h2>我为什么要支持这个作者？</h2>
+        <div class="qa-card__rule" aria-hidden="true"></div>
+        <p>因为这是命运石之门的选择（哦不你就是想来）</p>
+      </div>
+      <a class="back-to-top" href="#home">返回顶部 ↑</a>
+    </section>
   </main>
 </body>
 </html>
