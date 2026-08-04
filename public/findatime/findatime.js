@@ -6,6 +6,7 @@ const state = {
   comments: [],
   commentsLoading: false,
   activeReplyId: null,
+  withdrawingCommentId: null,
   timezone: browserTimeZone,
   creating: false,
   submitting: false,
@@ -542,6 +543,12 @@ function renderComments(id) {
     repliesByParent.get(reply.parentId).push(reply);
   });
 
+  const withdrawButton = comment => comment.owned && !comment.withdrawn ? `
+    <button class="withdraw-comment" type="button" data-withdraw-comment="${escapeText(comment.id)}"
+      ${state.withdrawingCommentId === comment.id ? 'disabled' : ''}>
+      ${escapeText(t(state.withdrawingCommentId === comment.id ? 'withdrawingComment' : 'withdrawComment'))}
+    </button>` : '';
+
   const replyMarkup = reply => `
     <article class="reply" aria-label="${escapeText(t('replyFrom', { name: reply.name }))}">
       <header class="comment-header">
@@ -549,16 +556,21 @@ function renderComments(id) {
         <time class="comment-time" datetime="${escapeText(reply.createdAt)}">${escapeText(commentDateText(reply.createdAt))}</time>
       </header>
       <p class="comment-text">${escapeText(reply.text)}</p>
+      ${withdrawButton(reply) ? `<div class="comment-controls">${withdrawButton(reply)}</div>` : ''}
     </article>`;
 
   const roots = comments.filter(comment => !comment.parentId);
   byId('comments-list').innerHTML = roots.length ? roots.map(comment => {
     const replies = repliesByParent.get(comment.id) || [];
     const replyOpen = state.activeReplyId === comment.id;
-    const replyButton = canComment ? `
+    const replyButton = canComment && !comment.withdrawn ? `
       <button class="reply-toggle" type="button" data-reply-to="${escapeText(comment.id)}" aria-expanded="${replyOpen}">
         ${escapeText(t(replyOpen ? 'cancelReply' : 'reply'))}
       </button>` : '';
+    const ownerButton = withdrawButton(comment);
+    const controls = replyButton || ownerButton
+      ? `<div class="comment-controls">${replyButton}${ownerButton}</div>`
+      : '';
     const repliesMarkup = replies.length
       ? `<div class="replies">${replies.map(replyMarkup).join('')}</div>`
       : '';
@@ -577,8 +589,8 @@ function renderComments(id) {
         <strong class="comment-name">${escapeText(comment.name)}</strong>
         <time class="comment-time" datetime="${escapeText(comment.createdAt)}">${escapeText(commentDateText(comment.createdAt))}</time>
       </header>
-      <p class="comment-text">${escapeText(comment.text)}</p>
-      ${replyButton}
+      <p class="comment-text${comment.withdrawn ? ' withdrawn' : ''}">${escapeText(comment.withdrawn ? t('commentWithdrawn') : comment.text)}</p>
+      ${controls}
       ${repliesMarkup}
       ${replyForm}
     </article>`;
@@ -592,7 +604,10 @@ async function loadComments(id) {
   byId('comments-loading').textContent = t(state.commentsMessageKey);
   delete byId('comments-loading').dataset.findatimeKey;
   try {
-    const response = await fetch(`/api/findatime/${encodeURIComponent(id)}?comments=1`);
+    const token = participantToken(id);
+    const response = await fetch(`/api/findatime/${encodeURIComponent(id)}?comments=1`, {
+      headers: token ? { 'X-Participant-Token': token } : {}
+    });
     const result = await response.json();
     if (!response.ok) throw responseError(result.error, 'commentsLoadFailed', result.code);
     state.comments = Array.isArray(result.comments) ? result.comments : [];
@@ -604,6 +619,38 @@ async function loadComments(id) {
     byId('comments-loading').dataset.findatimeKey = state.commentsMessageKey;
   } finally {
     state.commentsLoading = false;
+  }
+}
+
+async function withdrawOwnComment(id, commentId, button) {
+  if (!window.confirm(t('confirmWithdrawComment'))) return;
+  setError('', 'comment-error');
+  state.withdrawingCommentId = commentId;
+  renderComments(id);
+
+  try {
+    const response = await fetch(`/api/findatime/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'withdrawComment',
+        commentId,
+        participantToken: participantToken(id)
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw responseError(result.error, 'commentFailedRetry', result.code);
+    state.comments = Array.isArray(result.comments) ? result.comments : state.comments;
+    if (state.activeReplyId === commentId) state.activeReplyId = null;
+    byId('comment-success').textContent = t('commentWithdrawnSuccess');
+    byId('comment-success').dataset.findatimeKey = 'commentWithdrawnSuccess';
+  } catch (error) {
+    const errorKey = error.translationKey || 'commentFailedRetry';
+    setError(t(errorKey), 'comment-error', errorKey);
+  } finally {
+    state.withdrawingCommentId = null;
+    renderComments(id);
+    if (button?.isConnected) button.disabled = false;
   }
 }
 
@@ -667,6 +714,11 @@ function setupConversation(id) {
   });
 
   byId('comments-list').addEventListener('click', event => {
+    const withdrawButton = event.target.closest('[data-withdraw-comment]');
+    if (withdrawButton) {
+      withdrawOwnComment(id, withdrawButton.dataset.withdrawComment, withdrawButton);
+      return;
+    }
     const button = event.target.closest('[data-reply-to]');
     if (!button) return;
     const commentId = button.dataset.replyTo;
@@ -737,7 +789,7 @@ async function setupMeeting(id) {
       localStorage.setItem(participantNameKey(id), name);
       renderMeeting(result.meeting);
       updateConversationAccess(id);
-      renderComments(id);
+      loadComments(id);
       byId('vote-success').textContent = t('availabilitySaved');
       byId('vote-success').dataset.findatimeKey = 'availabilitySaved';
     } catch (error) {

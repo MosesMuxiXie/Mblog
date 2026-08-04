@@ -209,6 +209,54 @@ test('creates a meeting, updates availability, and supports comments and replies
       conversation.payload.comments.map(item => item.text),
       ['Can we start a little later?', 'That works for me.']
     );
+    assert.deepEqual(conversation.payload.comments.map(item => item.owned), [false, false]);
+
+    const ownedConversation = await invoke(meetingHandler, {
+      method: 'GET',
+      query: { id: created.payload.id, comments: '1' },
+      headers: { 'x-participant-token': created.payload.creatorToken }
+    });
+    assert.deepEqual(ownedConversation.payload.comments.map(item => item.owned), [true, false]);
+
+    const rejectedWithdrawal = await invoke(meetingHandler, {
+      method: 'DELETE',
+      query: { id: created.payload.id },
+      body: {
+        action: 'withdrawComment',
+        commentId: comment.payload.comment.id,
+        participantToken: updated.payload.participantToken
+      }
+    });
+    assert.equal(rejectedWithdrawal.statusCode, 403);
+    assert.equal(rejectedWithdrawal.payload.code, 'notCommentOwner');
+
+    const withdrawnRoot = await invoke(meetingHandler, {
+      method: 'DELETE',
+      query: { id: created.payload.id },
+      body: {
+        action: 'withdrawComment',
+        commentId: comment.payload.comment.id,
+        participantToken: created.payload.creatorToken
+      }
+    });
+    assert.equal(withdrawnRoot.statusCode, 200);
+    assert.equal(withdrawnRoot.payload.comments.length, 2);
+    assert.equal(withdrawnRoot.payload.comments[0].withdrawn, true);
+    assert.equal(withdrawnRoot.payload.comments[0].text, '');
+    assert.equal(withdrawnRoot.payload.comments[0].owned, false);
+
+    const withdrawnReply = await invoke(meetingHandler, {
+      method: 'DELETE',
+      query: { id: created.payload.id },
+      body: {
+        action: 'withdrawComment',
+        commentId: reply.payload.comment.id,
+        participantToken: updated.payload.participantToken
+      }
+    });
+    assert.equal(withdrawnReply.statusCode, 200);
+    assert.equal(withdrawnReply.payload.comments.length, 1);
+    assert.equal(withdrawnReply.payload.comments[0].withdrawn, true);
   } finally {
     fs.rmSync(temporaryDirectory, { recursive: true, force: true });
     if (originalDataFile == null) delete process.env.FINDATIME_DATA_FILE;

@@ -342,6 +342,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--teal); box-shado
 .comment-name { color: var(--teal); font-weight: 800; }
 .comment-time { color: var(--muted); font-size: .75rem; white-space: nowrap; }
 .comment-text { margin: 9px 0 12px; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+.comment-text.withdrawn { color: var(--muted); font-style: italic; }
+.comment-controls { display: flex; align-items: center; gap: 14px; }
 .reply-toggle {
   padding: 3px 0;
   border: 0;
@@ -351,6 +353,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--teal); box-shado
   font-weight: 800;
 }
 .reply-toggle:hover { color: var(--red-dark); }
+.withdraw-comment {
+  padding: 3px 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: .82rem;
+  font-weight: 750;
+}
+.withdraw-comment:hover:not(:disabled) { color: var(--red-dark); }
+.withdraw-comment:disabled { cursor: wait; opacity: .65; }
 .reply-form { margin-top: 14px; padding-top: 14px; border-top: 1px solid #eee8dd; }
 .reply-form textarea { min-height: 88px; }
 .reply-form .comment-actions { justify-content: flex-end; }

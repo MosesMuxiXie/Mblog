@@ -178,9 +178,17 @@
         postingComment: 'Posting…',
         writeCommentFirst: 'Write a comment first.',
         invalidReplyTarget: 'This comment cannot be replied to.',
+        invalidComment: 'This comment cannot be withdrawn.',
+        notCommentOwner: 'You can only withdraw your own comments.',
+        commentNotFound: 'This comment no longer exists.',
         commentFailedRetry: 'Could not save the comment. Please try again later.',
         commentPosted: 'Your comment has been posted.',
-        replyPosted: 'Your reply has been posted.'
+        replyPosted: 'Your reply has been posted.',
+        withdrawComment: 'Withdraw',
+        withdrawingComment: 'Withdrawing…',
+        confirmWithdrawComment: 'Withdraw this comment? This cannot be undone.',
+        commentWithdrawn: 'This comment has been withdrawn.',
+        commentWithdrawnSuccess: 'Your comment has been withdrawn.'
       }
     },
     'zh-CN': {
@@ -355,9 +363,17 @@
         postingComment: '正在发表…',
         writeCommentFirst: '请先写下评论内容。',
         invalidReplyTarget: '无法回复这条评论。',
+        invalidComment: '无法撤回这条评论。',
+        notCommentOwner: '你只能撤回自己发表的评论。',
+        commentNotFound: '这条评论已不存在。',
         commentFailedRetry: '评论保存失败，请稍后重试。',
         commentPosted: '评论已发表。',
-        replyPosted: '回复已发表。'
+        replyPosted: '回复已发表。',
+        withdrawComment: '撤回',
+        withdrawingComment: '正在撤回…',
+        confirmWithdrawComment: '确定撤回这条评论吗？此操作无法撤销。',
+        commentWithdrawn: '该评论已撤回。',
+        commentWithdrawnSuccess: '评论已撤回。'
       }
     }
   };
