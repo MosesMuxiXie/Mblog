@@ -68,6 +68,9 @@ function invoke(handler, req) {
     json(body) {
       payload = body;
       return this;
+    },
+    end() {
+      return this;
     }
   };
   return Promise.resolve(handler(req, res)).then(() => ({ statusCode, payload }));
@@ -264,5 +267,42 @@ test('creates a meeting, updates availability, and supports comments and replies
     delete require.cache[storePath];
     delete require.cache[createPath];
     delete require.cache[meetingPath];
+  }
+});
+
+test('records visits through the consolidated findatime endpoint', async () => {
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'findatime-visit-test-'));
+  const originalAdminDataFile = process.env.FINDATIME_ADMIN_DATA_FILE;
+  process.env.FINDATIME_ADMIN_DATA_FILE = path.join(temporaryDirectory, 'admin.json');
+
+  const adminStorePath = require.resolve('../lib/findatimeAdminStore');
+  const createPath = require.resolve('../api/findatime/index');
+  delete require.cache[adminStorePath];
+  delete require.cache[createPath];
+  const handler = require(createPath);
+
+  try {
+    const invalid = await invoke(handler, {
+      method: 'POST',
+      query: { operation: 'visit' },
+      body: { visitorId: 'too-short' }
+    });
+    assert.equal(invalid.statusCode, 400);
+
+    const recorded = await invoke(handler, {
+      method: 'POST',
+      query: { operation: 'visit' },
+      body: { visitorId: 'visitor_1234567890' }
+    });
+    assert.equal(recorded.statusCode, 204);
+
+    const stored = JSON.parse(fs.readFileSync(process.env.FINDATIME_ADMIN_DATA_FILE, 'utf8'));
+    assert.deepEqual(Object.values(stored.visitorsByDay), [['visitor_1234567890']]);
+  } finally {
+    fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+    if (originalAdminDataFile == null) delete process.env.FINDATIME_ADMIN_DATA_FILE;
+    else process.env.FINDATIME_ADMIN_DATA_FILE = originalAdminDataFile;
+    delete require.cache[adminStorePath];
+    delete require.cache[createPath];
   }
 });

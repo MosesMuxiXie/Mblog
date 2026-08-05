@@ -114,7 +114,7 @@ function trackVisit() {
       : `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
     localStorage.setItem(storageKey, visitorId);
   }
-  fetch('/api/findatime/visit', {
+  fetch('/api/findatime?operation=visit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ visitorId }),

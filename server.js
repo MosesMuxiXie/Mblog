@@ -47,12 +47,16 @@ app.get('/blog/:slug', (req, res) => {
   return res.sendFile(path.join(__dirname, 'public', 'blog.html'));
 });
 
-app.all('/api/findatime/visit', require('./api/findatime/visit'));
+const findatimeIndexHandler = require('./api/findatime/index');
+app.all('/api/findatime/visit', (req, res) => {
+  req.query = { ...req.query, operation: 'visit' };
+  return findatimeIndexHandler(req, res);
+});
 app.all('/api/findatime/admin/auth', require('./api/findatime/admin/auth'));
 app.all('/api/findatime/admin/setup', require('./api/findatime/admin/setup'));
 app.all('/api/findatime/admin/dashboard', require('./api/findatime/admin/dashboard'));
 app.all('/api/findatime/admin/password', require('./api/findatime/admin/password'));
-app.all('/api/findatime', require('./api/findatime/index'));
+app.all('/api/findatime', findatimeIndexHandler);
 app.all('/api/findatime/:id', require('./api/findatime/[id]'));
 app.all('/api/blogs/admin/auth', require('./api/blogs/admin/auth'));
 app.all('/api/blogs/admin/credentials', require('./api/blogs/admin/credentials'));

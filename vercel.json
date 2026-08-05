@@ -37,6 +37,7 @@
       }
     ],
     "rewrites": [
+      { "source": "/api/findatime/visit", "destination": "/api/findatime?operation=visit" },
       { "source": "/blog/admin", "destination": "/blog-admin.html" },
       { "source": "/blog/dashboard", "destination": "/blog-dashboard.html" },
       { "source": "/blog/:slug", "destination": "/blog.html" },
