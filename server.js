@@ -14,6 +14,9 @@ const { readSession: readBlogAdminSession } = require('./lib/blogAdminAuth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.get(['/findatime/admin', '/findatime/admin/'], (req, res) => (
+  res.redirect(307, '/admin/dashboard?panel=findatime-panel')
+));
 app.use(bodyParser.json({ limit: '3mb' }));
 app.use(express.static('public'));
 
@@ -26,22 +29,23 @@ function setAdminPageHeaders(res) {
 
 app.get('/findatime', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'index.html')));
 app.get('/findatime/uuid/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'index.html')));
-app.get('/findatime/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'findatime', 'admin', 'index.html')));
 app.get('/blog', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
-app.get('/blog/admin', (req, res) => {
+app.get('/admin', (req, res) => {
   setAdminPageHeaders(res);
   return res.sendFile(path.join(__dirname, 'public', 'blog-admin.html'));
 });
-app.get('/blog/dashboard', async (req, res) => {
+app.get('/admin/dashboard', async (req, res) => {
   try {
-    if (!(await readBlogAdminSession(req))) return res.redirect('/blog/admin');
+    if (!(await readBlogAdminSession(req))) return res.redirect('/admin');
     setAdminPageHeaders(res);
     return res.sendFile(path.join(__dirname, 'public', 'blog-dashboard.html'));
   } catch (error) {
     console.error(error);
-    return res.redirect('/blog/admin');
+    return res.redirect('/admin');
   }
 });
+app.get('/blog/admin', (req, res) => res.redirect(307, '/admin'));
+app.get('/blog/dashboard', (req, res) => res.redirect(307, '/admin/dashboard'));
 app.get('/blog/:slug', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   return res.sendFile(path.join(__dirname, 'public', 'blog.html'));

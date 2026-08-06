@@ -7,6 +7,10 @@ let slugTouched = false;
 let savedSelection = null;
 let homepageCoverImage = '';
 let homepageCoverDirty = false;
+let findatimeChartData = [];
+let findatimeLoaded = false;
+let findatimeLoading = false;
+let findatimeResizeTimer = null;
 
 const DEFAULT_EMOJIS = [
   '😀', '😄', '😂', '🥹', '😍', '🤔', '😎',
@@ -14,6 +18,7 @@ const DEFAULT_EMOJIS = [
   '✨', '💡', '📌', '✅', '⚠️', '🚀', '🌿'
 ];
 const INSERT_SYMBOLS = ['©', '®', '™', '°', '±', '×', '÷', '≠', '≈', '≤', '≥', '∞', '√', '∑', 'π', 'Ω'];
+const FINDATIME_PERIOD_ICONS = ['●', '7', '30', '∞'];
 const CUSTOM_EMOJI_STORAGE_KEY = 'mosankai-blog-custom-emojis';
 const ATTACHMENT_TYPES = new Map([
   ['pdf', 'application/pdf'],
@@ -38,7 +43,7 @@ async function api(path, options = {}) {
   });
   const payload = response.status === 204 ? null : await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (response.status === 401) window.location.replace('/blog/admin');
+    if (response.status === 401) window.location.replace('/admin');
     const error = new Error(payload?.error || '请求失败，请稍后重试');
     error.status = response.status;
     throw error;
@@ -156,14 +161,30 @@ function showPanel(panelId) {
 
   const editorMode = panelId === 'editor-panel';
   document.body.classList.toggle('editor-mode', editorMode);
-  const headings = {
-    'posts-panel': '文章管理',
-    'site-panel': '网站封面',
-    'account-panel': '账号安全'
+  const panelMeta = {
+    'posts-panel': ['文章管理', 'EDITORIAL DESK'],
+    'site-panel': ['网站封面', 'SITE APPEARANCE'],
+    'findatime-panel': ['约时间管理', 'FIND A TIME'],
+    'account-panel': ['账号安全', 'ADMIN SECURITY']
   };
-  if (!editorMode) byId('page-heading').textContent = headings[panelId] || '博客后台';
+  if (!editorMode) {
+    const [heading, eyebrow] = panelMeta[panelId] || ['管理后台', 'MOSANKAI ADMIN'];
+    byId('page-heading').textContent = heading;
+    byId('page-eyebrow').textContent = eyebrow;
+  }
   closeMenu();
   closeStudioPanels();
+
+  if (panelId === 'findatime-panel') {
+    if (!findatimeLoaded) loadFindatimeDashboard();
+    else window.requestAnimationFrame(drawFindatimeChart);
+    if (window.location.pathname === '/admin/dashboard') {
+      window.history.replaceState(null, '', '/admin/dashboard?panel=findatime-panel');
+    }
+  } else if (!editorMode && window.location.pathname === '/admin/dashboard'
+      && window.location.search.includes('panel=findatime-panel')) {
+    window.history.replaceState(null, '', '/admin/dashboard');
+  }
 }
 
 function normalizeSlug(value) {
@@ -290,6 +311,158 @@ async function loadSiteSettings() {
   } catch (error) {
     setMessage('homepage-cover-message', error.message, 'error');
   }
+}
+
+function findatimeNumber(value) {
+  return new Intl.NumberFormat('zh-CN').format(value || 0);
+}
+
+function findatimeDateTime(value, includeYear = false) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    ...(includeYear ? { year: 'numeric' } : {}),
+    month: includeYear ? '2-digit' : 'long',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(includeYear ? { second: '2-digit', hourCycle: 'h23' } : {})
+  }).format(new Date(value));
+}
+
+function findatimeChartDate(value) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'UTC',
+    month: 'numeric',
+    day: 'numeric'
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function renderFindatimeDashboard(data) {
+  byId('findatime-updated-at').textContent = `数据更新于 ${findatimeDateTime(data.generatedAt)}`;
+  byId('findatime-summary-cards').innerHTML = (data.periods || []).map((period, index) => `
+    <article class="findatime-summary-card">
+      <div class="findatime-summary-top">
+        <span>${escapeHtml(period.label)}创建的约会</span>
+        <b>${FINDATIME_PERIOD_ICONS[index] || '·'}</b>
+      </div>
+      <div class="findatime-summary-number">
+        <strong>${findatimeNumber(period.meetingCount)}</strong>
+        <span>场会议</span>
+      </div>
+      <div class="findatime-summary-meta">
+        <span>访问用户 <strong>${findatimeNumber(period.visitorCount)}</strong></span>
+        <span>参与人数 <strong>${findatimeNumber(period.participantCount)}</strong></span>
+      </div>
+    </article>
+  `).join('') || '<div class="findatime-loading-card">暂无统计数据</div>';
+
+  byId('findatime-meeting-table-body').innerHTML = data.meetings?.length
+    ? data.meetings.map(meeting => `
+      <tr>
+        <td><a href="/findatime/uuid/${encodeURIComponent(meeting.id)}" target="_blank" rel="noopener">${escapeHtml(meeting.id)}</a></td>
+        <td>${escapeHtml(findatimeDateTime(meeting.createdAt, true))}</td>
+        <td><span class="findatime-participant-badge">${findatimeNumber(meeting.participantCount)} 人</span></td>
+        <td>${escapeHtml(meeting.title)}</td>
+      </tr>
+    `).join('')
+    : '<tr><td class="findatime-empty-table" colspan="4">暂无会议数据</td></tr>';
+
+  findatimeChartData = Array.isArray(data.chart) ? data.chart : [];
+  findatimeLoaded = true;
+  window.requestAnimationFrame(drawFindatimeChart);
+}
+
+async function loadFindatimeDashboard() {
+  if (findatimeLoading) return;
+  findatimeLoading = true;
+  const button = byId('refresh-findatime');
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = '正在刷新…';
+  byId('findatime-updated-at').textContent = '正在同步最新数据…';
+  try {
+    renderFindatimeDashboard(await api('/api/findatime/admin/dashboard'));
+  } catch (error) {
+    byId('findatime-updated-at').textContent = error.message;
+    byId('findatime-summary-cards').innerHTML = `<div class="findatime-loading-card error-text">${escapeHtml(error.message)}</div>`;
+  } finally {
+    findatimeLoading = false;
+    button.disabled = false;
+    button.textContent = original;
+  }
+}
+
+function drawFindatimeChart() {
+  const canvas = byId('findatime-trend-chart');
+  if (!canvas || byId('findatime-panel').classList.contains('hidden')) return;
+  const empty = byId('findatime-chart-empty');
+  empty.classList.toggle('hidden', findatimeChartData.length > 0);
+  if (!findatimeChartData.length) return;
+
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.round(rect.width * ratio));
+  canvas.height = Math.max(1, Math.round(rect.height * ratio));
+  const context = canvas.getContext('2d');
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+  const width = rect.width;
+  const height = rect.height;
+  const margin = { top: 20, right: 18, bottom: 40, left: 42 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const maxValue = Math.max(1, ...findatimeChartData.flatMap(point => [
+    point.meetings, point.visitors, point.participants
+  ]));
+  const ceiling = Math.max(4, Math.ceil(maxValue / 4) * 4);
+
+  context.clearRect(0, 0, width, height);
+  context.font = '10px "Segoe UI", sans-serif';
+  context.textBaseline = 'middle';
+  context.strokeStyle = 'rgba(23, 43, 58, .1)';
+  context.fillStyle = '#778087';
+  context.lineWidth = 1;
+
+  for (let index = 0; index <= 4; index += 1) {
+    const y = margin.top + plotHeight * (index / 4);
+    context.beginPath();
+    context.moveTo(margin.left, y);
+    context.lineTo(width - margin.right, y);
+    context.stroke();
+    context.textAlign = 'right';
+    context.fillText(String(Math.round(ceiling * (1 - index / 4))), margin.left - 8, y);
+  }
+
+  const labelCount = Math.min(5, findatimeChartData.length);
+  for (let index = 0; index < labelCount; index += 1) {
+    const dataIndex = labelCount === 1 ? 0
+      : Math.round(index * (findatimeChartData.length - 1) / (labelCount - 1));
+    const x = findatimeChartData.length === 1 ? margin.left + plotWidth / 2
+      : margin.left + plotWidth * (dataIndex / (findatimeChartData.length - 1));
+    context.textAlign = index === 0 ? 'left' : index === labelCount - 1 ? 'right' : 'center';
+    context.fillText(findatimeChartDate(findatimeChartData[dataIndex].date), x, height - 15);
+  }
+
+  [
+    { key: 'meetings', color: '#d85832' },
+    { key: 'visitors', color: '#2f9677' },
+    { key: 'participants', color: '#397ca8' }
+  ].forEach(({ key, color }) => {
+    context.beginPath();
+    findatimeChartData.forEach((point, index) => {
+      const x = findatimeChartData.length === 1 ? margin.left + plotWidth / 2
+        : margin.left + plotWidth * (index / (findatimeChartData.length - 1));
+      const y = margin.top + plotHeight * (1 - point[key] / ceiling);
+      if (index === 0) context.moveTo(x, y);
+      else context.lineTo(x, y);
+    });
+    context.strokeStyle = color;
+    context.lineWidth = 2.2;
+    context.lineJoin = 'round';
+    context.lineCap = 'round';
+    context.stroke();
+  });
 }
 
 function resizeTitle() {
@@ -991,13 +1164,16 @@ byId('menu-button').addEventListener('click', () => {
   byId('sidebar-scrim').classList.add('open');
 });
 byId('sidebar-scrim').addEventListener('click', closeMenu);
+byId('refresh-findatime').addEventListener('click', loadFindatimeDashboard);
 byId('logout-button').addEventListener('click', async () => {
   await api('/api/blogs/admin/auth', { method: 'DELETE' }).catch(() => {});
-  window.location.replace('/blog/admin');
+  window.location.replace('/admin');
 });
 window.addEventListener('resize', () => {
   if (window.innerWidth > 860) closeMenu();
   if (window.innerWidth > 1050) closeStudioPanels();
+  window.clearTimeout(findatimeResizeTimer);
+  findatimeResizeTimer = window.setTimeout(drawFindatimeChart, 120);
 });
 window.addEventListener('beforeunload', event => {
   const unsavedArticle = document.body.classList.contains('editor-mode') && editorDirty;
@@ -1022,7 +1198,7 @@ updateSlugPreview();
 api('/api/blogs/admin/auth')
   .then(async status => {
     if (!status.authenticated) {
-      window.location.replace('/blog/admin');
+      window.location.replace('/admin');
       return;
     }
     adminStatus = status;
@@ -1031,5 +1207,7 @@ api('/api/blogs/admin/auth')
     byId('dashboard-loading').classList.add('hidden');
     byId('dashboard-app').classList.remove('hidden');
     await Promise.all([loadPosts(), loadSiteSettings()]);
+    const requestedPanel = new URLSearchParams(window.location.search).get('panel');
+    if (requestedPanel === 'findatime-panel') showPanel('findatime-panel');
   })
-  .catch(() => window.location.replace('/blog/admin'));
+  .catch(() => window.location.replace('/admin'));

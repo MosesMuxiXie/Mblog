@@ -48,7 +48,7 @@ form.addEventListener('submit', async event => {
       })
     });
     setMessage('验证成功，正在进入后台…', 'success');
-    window.location.replace('/blog/dashboard');
+    window.location.replace('/admin/dashboard');
   } catch (error) {
     setMessage(error.message, 'error');
     passwordInput.select();
@@ -60,6 +60,6 @@ form.addEventListener('submit', async event => {
 
 api('/api/blogs/admin/auth')
   .then(status => {
-    if (status.authenticated) window.location.replace('/blog/dashboard');
+    if (status.authenticated) window.location.replace('/admin/dashboard');
   })
   .catch(error => setMessage(error.message, 'error'));

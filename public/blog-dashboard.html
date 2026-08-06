@@ -13,7 +13,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>博客后台 | Mosankai</title>
+  <title>MOSANKAI 管理后台</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="/blog-admin.css">
 </head>
@@ -25,9 +25,9 @@
 
   <div id="dashboard-app" class="dashboard-shell hidden">
     <aside class="dashboard-sidebar">
-      <a class="brand brand-light" href="/blog">
+      <a class="brand brand-light" href="/">
         <span class="brand-mark">M</span>
-        <span>MOSANKAI / BLOG</span>
+        <span>MOSANKAI / ADMIN</span>
       </a>
 
       <nav class="side-nav" aria-label="后台导航">
@@ -40,11 +40,17 @@
         <button class="side-nav-item" type="button" data-panel="site-panel">
           <span>▧</span> 网站封面
         </button>
+        <button class="side-nav-item" type="button" data-panel="findatime-panel">
+          <span>◷</span> 约时间管理
+        </button>
         <button class="side-nav-item" type="button" data-panel="account-panel">
           <span>⌁</span> 账号安全
         </button>
         <a class="side-nav-item" href="/blog" target="_blank" rel="noopener">
           <span>↗</span> 查看博客
+        </a>
+        <a class="side-nav-item" href="/findatime" target="_blank" rel="noopener">
+          <span>↗</span> 查看约时间
         </a>
       </nav>
 
@@ -63,7 +69,7 @@
         <button id="menu-button" class="icon-button mobile-menu" type="button"
           aria-label="打开菜单">☰</button>
         <div>
-          <span class="eyebrow ink">EDITORIAL DESK</span>
+          <span id="page-eyebrow" class="eyebrow ink">EDITORIAL DESK</span>
           <h1 id="page-heading">文章管理</h1>
         </div>
         <span id="session-label" class="session-label">安全会话已启用</span>
@@ -71,7 +77,7 @@
 
       <div id="default-password-warning" class="security-warning hidden">
         <span>!</span>
-        <p><strong>你仍在使用初始密码。</strong> 为保护博客，请前往“账号安全”立即修改。</p>
+        <p><strong>你仍在使用初始密码。</strong> 为保护后台，请前往“账号安全”立即修改。</p>
         <button type="button" data-open-account>现在修改</button>
       </div>
 
@@ -131,6 +137,69 @@
               <li><span>03</span><p><strong>保存后立即生效</strong>重新打开首页即可看到新的封面。</p></li>
             </ol>
           </aside>
+        </div>
+      </section>
+
+      <section id="findatime-panel" class="dashboard-panel hidden">
+        <div class="findatime-admin-shell">
+          <header class="findatime-admin-heading">
+            <div>
+              <span class="eyebrow ink">FIND A TIME / OVERVIEW</span>
+              <h2>约时间管理</h2>
+              <p>查看约会创建量、访问人数、参与人数和最近的约会记录。</p>
+            </div>
+            <div class="findatime-heading-actions">
+              <span id="findatime-updated-at">等待加载数据…</span>
+              <button id="refresh-findatime" class="secondary-button small" type="button">刷新数据</button>
+            </div>
+          </header>
+
+          <div id="findatime-summary-cards" class="findatime-summary-grid" aria-live="polite">
+            <div class="findatime-loading-card">正在读取约时间统计…</div>
+          </div>
+
+          <article class="findatime-data-card findatime-chart-card">
+            <div class="findatime-card-heading">
+              <div>
+                <span class="eyebrow ink">ACTIVITY TREND</span>
+                <h3>整体趋势</h3>
+              </div>
+              <div class="findatime-chart-legend" aria-label="图表图例">
+                <span><i class="meetings"></i>约会</span>
+                <span><i class="visitors"></i>访问用户</span>
+                <span><i class="participants"></i>参与人数</span>
+              </div>
+            </div>
+            <div class="findatime-chart-wrap">
+              <canvas id="findatime-trend-chart" aria-label="约时间活动趋势图"></canvas>
+              <p id="findatime-chart-empty" class="findatime-empty hidden">暂无趋势数据</p>
+            </div>
+          </article>
+
+          <article class="findatime-data-card">
+            <div class="findatime-card-heading">
+              <div>
+                <span class="eyebrow ink">RECENT MEETINGS</span>
+                <h3>约会记录</h3>
+              </div>
+              <a class="secondary-button small" href="/findatime" target="_blank" rel="noopener">打开约时间 ↗</a>
+            </div>
+            <div class="findatime-table-wrap">
+              <table class="findatime-table">
+                <thead>
+                  <tr>
+                    <th>约会编号</th>
+                    <th>创建时间</th>
+                    <th>参与人数</th>
+                    <th>标题</th>
+                  </tr>
+                </thead>
+                <tbody id="findatime-meeting-table-body">
+                  <tr><td class="findatime-empty-table" colspan="4">正在读取约会记录…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -403,11 +472,11 @@
           <article class="account-intro">
             <span class="eyebrow ink">ONE ADMIN ONLY</span>
             <h2>唯一管理员账号</h2>
-            <p>本博客只保留一个管理员。修改账号或密码前，必须再次输入当前密码进行验证。</p>
+            <p>MOSANKAI 后台只保留一个管理员。修改账号或密码前，必须再次输入当前密码进行验证。</p>
             <div class="security-points">
               <p><span>01</span> 密码以加盐哈希保存，不记录明文。</p>
               <p><span>02</span> 新登录或修改成功后，此前的登录会话会立即失效。</p>
-              <p><span>03</span> 后台发布接口仅接受有效管理员会话。</p>
+              <p><span>03</span> 后台数据与发布接口仅接受有效管理员会话。</p>
             </div>
           </article>
 

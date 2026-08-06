@@ -138,6 +138,13 @@ button {
   object-fit: contain;
 }
 
+.social-links .admin-link span {
+  display: block;
+  font-family: "Segoe UI Symbol", "Noto Sans SC", sans-serif;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
 .drawer-backdrop {
   position: fixed;
   z-index: 59;
