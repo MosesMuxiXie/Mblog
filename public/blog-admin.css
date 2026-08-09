@@ -518,6 +518,62 @@ body.creator-mode .creator-panel { display: block; height: 100vh; padding: 0; }
 .creator-color-control input[type="color"] { width: 38px; height: 28px; border: 1px solid rgba(255, 255, 255, .16); padding: 2px; background: transparent; cursor: pointer; }
 .creator-color-control output { min-width: 52px; font-size: 9px; text-align: right; }
 .creator-control-help { margin: 15px 0 0; color: rgba(233, 238, 232, .4); font-size: 9px; line-height: 1.7; }
+.creator-control-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.creator-control-title-row h3 { margin: 0; }
+.creator-mini-button {
+  border: 0;
+  padding: 5px 0;
+  color: #c6ef46;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.creator-pages-control select,
+.creator-pages-control input[type="text"],
+.creator-pages-control textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 0;
+  padding: 9px 10px;
+  color: #e9eee8;
+  background: #101412;
+  font-size: 10px;
+  outline: 0;
+}
+.creator-pages-control select { height: 38px; }
+.creator-pages-control textarea { min-height: 86px; resize: vertical; line-height: 1.6; }
+.creator-pages-control select:focus,
+.creator-pages-control input[type="text"]:focus,
+.creator-pages-control textarea:focus { border-color: #c6ef46; }
+.creator-custom-page-fields { display: grid; gap: 0; }
+.creator-page-background-preview {
+  position: relative;
+  height: 112px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  margin-top: 17px;
+  border: 1px dashed rgba(255, 255, 255, .18);
+  color: rgba(233, 238, 232, .42);
+  background: #101412;
+  font-size: 9px;
+}
+.creator-page-background-preview img { width: 100%; height: 100%; object-fit: cover; }
+.creator-page-background-preview span { display: none; padding: 12px; text-align: center; }
+.creator-page-background-preview.empty img { display: none; }
+.creator-page-background-preview.empty span { display: block; }
+.creator-page-background-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.creator-page-background-actions .creator-secondary-button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 9px;
+  cursor: pointer;
+}
+.creator-page-background-actions .creator-secondary-button.disabled { opacity: .45; pointer-events: none; }
 .creator-inspector__actions { display: grid; gap: 8px; padding-top: 22px; }
 .creator-secondary-button { min-height: 38px; font-size: 9px; }
 .creator-secondary-button:hover { border-color: rgba(255, 255, 255, .35); }

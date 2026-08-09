@@ -9,17 +9,19 @@ let homepageCoverImage = '';
 let homepageCoverDirty = false;
 let homepageCoverForPreview = '/img/m48a5_patton_cn.jpg';
 let homepageLayoutDirty = false;
+let selectedCreatorPageId = 'who';
 const DEFAULT_HOMEPAGE_LAYOUT = {
   accent: '#c6ef46',
   hero: { titleX: 50, titleY: 50, titleScale: 100, imageX: 54, imageY: 50, overlay: 66 },
   content: {
     cardWidth: 960,
     cards: {
-      who: { x: 42, y: 50 },
-      features: { x: 58, y: 50 },
-      contact: { x: 42, y: 50 },
-      support: { x: 42, y: 50 }
-    }
+      who: { x: 42, y: 50, backgroundImage: '', imageX: 50, imageY: 50, overlay: 78 },
+      features: { x: 58, y: 50, backgroundImage: '', imageX: 50, imageY: 50, overlay: 78 },
+      contact: { x: 42, y: 50, backgroundImage: '', imageX: 50, imageY: 50, overlay: 78 },
+      support: { x: 42, y: 50, backgroundImage: '', imageX: 50, imageY: 50, overlay: 78 }
+    },
+    extraPages: []
   }
 };
 let homepageLayout = JSON.parse(JSON.stringify(DEFAULT_HOMEPAGE_LAYOUT));
@@ -222,14 +224,35 @@ function normalizeHomepageLayout(value) {
   const content = source.content && typeof source.content === 'object' ? source.content : {};
   const inputCards = content.cards && typeof content.cards === 'object' ? content.cards : {};
   const cards = {};
+  const safeBackground = value => {
+    const candidate = String(value || '').trim();
+    return candidate.startsWith('/') && !candidate.startsWith('//')
+      || /^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(candidate)
+      ? candidate
+      : '';
+  };
+  const pageVisual = (input, fallback) => ({
+    x: numberInRange(input.x, fallback.x, 12, 88),
+    y: numberInRange(input.y, fallback.y, 18, 82),
+    backgroundImage: safeBackground(input.backgroundImage),
+    imageX: numberInRange(input.imageX, 50, 0, 100),
+    imageY: numberInRange(input.imageY, 50, 0, 100),
+    overlay: numberInRange(input.overlay, 78, 20, 95)
+  });
   Object.keys(DEFAULT_HOMEPAGE_LAYOUT.content.cards).forEach(id => {
     const input = inputCards[id] && typeof inputCards[id] === 'object' ? inputCards[id] : {};
     const fallback = DEFAULT_HOMEPAGE_LAYOUT.content.cards[id];
-    cards[id] = {
-      x: numberInRange(input.x, fallback.x, 12, 88),
-      y: numberInRange(input.y, fallback.y, 18, 82)
-    };
+    cards[id] = pageVisual(input, fallback);
   });
+  const extraPages = (Array.isArray(content.extraPages) ? content.extraPages : []).slice(0, 8)
+    .filter(page => /^custom-[a-z0-9-]{4,48}$/.test(String(page?.id || '')))
+    .map((page, index) => ({
+      id: String(page.id),
+      label: String(page.label || `PAGE / ${String(index + 5).padStart(2, '0')}`).slice(0, 48),
+      title: String(page.title || '新页面标题').slice(0, 120),
+      body: String(page.body || '在创作者模式中编辑这个页面的内容。').slice(0, 1000),
+      ...pageVisual(page, { x: index % 2 ? 58 : 42, y: 50 })
+    }));
   return {
     accent: /^#[0-9a-f]{6}$/i.test(String(source.accent || ''))
       ? String(source.accent).toLowerCase()
@@ -244,7 +267,8 @@ function normalizeHomepageLayout(value) {
     },
     content: {
       cardWidth: numberInRange(content.cardWidth, 960, 520, 1120),
-      cards
+      cards,
+      extraPages
     }
   };
 }
@@ -360,6 +384,29 @@ async function optimizedHomepageCover(file) {
   return output;
 }
 
+async function optimizedPageBackground(file) {
+  const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+  if (!allowed.includes(file.type)) throw new Error('请选择 JPG、PNG 或 WebP 图片');
+  if (file.size > 12 * 1024 * 1024) throw new Error('原始图片不能超过 12 MB');
+
+  const source = await fileDataUrl(file);
+  const image = await loadImageSource(source);
+  const render = (maxWidth, maxHeight, quality) => {
+    const scale = Math.min(1, maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/webp', quality);
+  };
+
+  let output = render(1600, 1000, .7);
+  if (output.length > 345000) output = render(1400, 900, .56);
+  if (output.length > 345000) output = render(1100, 760, .5);
+  if (output.length > 355000) throw new Error('图片处理后仍然过大，请换一张尺寸更小的图片');
+  return output;
+}
+
 function updateHomepageCoverPreview(value, isDefault = false) {
   const coverImage = safeImage(value) || '/img/m48a5_patton_cn.jpg';
   homepageCoverForPreview = coverImage;
@@ -382,6 +429,58 @@ function updateCreatorSaveState() {
   byId('creator-save-state').textContent = homepageLayoutDirty ? '有未保存的修改' : '所有修改已保存';
 }
 
+function creatorPageById(id = selectedCreatorPageId) {
+  return homepageLayout.content.cards[id]
+    || homepageLayout.content.extraPages.find(page => page.id === id)
+    || null;
+}
+
+function creatorPageName(id) {
+  const names = { who: '01 · 关于', features: '02 · 功能', contact: '03 · 联系', support: '04 · 支持' };
+  const extra = homepageLayout.content.extraPages.find(page => page.id === id);
+  return names[id] || (extra ? `${String(homepageLayout.content.extraPages.indexOf(extra) + 5).padStart(2, '0')} · ${extra.title}` : '页面');
+}
+
+function syncCreatorPageControls() {
+  const select = byId('creator-page-select');
+  const optionSignature = JSON.stringify(homepageLayout.content.extraPages.map(page => [page.id, page.title]));
+  if (select.dataset.signature !== optionSignature) {
+    select.querySelectorAll('option[data-custom-page]').forEach(option => option.remove());
+    homepageLayout.content.extraPages.forEach((page, index) => {
+      const option = document.createElement('option');
+      option.value = page.id;
+      option.dataset.customPage = '';
+      option.textContent = `${String(index + 5).padStart(2, '0')} · ${page.title}`;
+      select.append(option);
+    });
+    select.dataset.signature = optionSignature;
+  }
+  if (!creatorPageById(selectedCreatorPageId)) selectedCreatorPageId = 'who';
+  select.value = selectedCreatorPageId;
+
+  const page = creatorPageById();
+  const custom = homepageLayout.content.extraPages.some(item => item.id === selectedCreatorPageId);
+  byId('creator-custom-page-fields').classList.toggle('hidden', !custom);
+  byId('delete-homepage-page').classList.toggle('hidden', !custom);
+  if (custom) {
+    byId('creator-page-label').value = page.label;
+    byId('creator-page-title').value = page.title;
+    byId('creator-page-body').value = page.body;
+  }
+
+  const background = safeImage(page?.backgroundImage);
+  const preview = byId('creator-page-background-preview');
+  preview.classList.toggle('empty', !background);
+  preview.querySelector('img').src = background || '';
+  byId('remove-page-background').disabled = !background;
+  byId('creator-page-overlay').value = page?.overlay ?? 78;
+  byId('creator-page-overlay-output').textContent = `${Math.round(page?.overlay ?? 78)}%`;
+  byId('creator-page-image-x').value = page?.imageX ?? 50;
+  byId('creator-page-image-x-output').textContent = `${Math.round(page?.imageX ?? 50)}%`;
+  byId('creator-page-image-y').value = page?.imageY ?? 50;
+  byId('creator-page-image-y-output').textContent = `${Math.round(page?.imageY ?? 50)}%`;
+}
+
 function syncCreatorControls() {
   byId('creator-accent').value = homepageLayout.accent;
   byId('creator-accent-output').textContent = homepageLayout.accent;
@@ -392,6 +491,7 @@ function syncCreatorControls() {
   byId('creator-card-width').value = homepageLayout.content.cardWidth;
   byId('creator-card-width-output').textContent = `${Math.round(homepageLayout.content.cardWidth)} px`;
   document.documentElement.style.setProperty('--creator-accent', homepageLayout.accent);
+  syncCreatorPageControls();
   updateCreatorSaveState();
 }
 
@@ -418,6 +518,53 @@ function setLayoutPath(path, value) {
   parts.slice(0, -1).forEach(part => { target = target[part]; });
   target[parts.at(-1)] = path === 'accent' ? String(value) : Number(value);
   setHomepageLayout(homepageLayout);
+}
+
+function updateSelectedCreatorPage(changes, message = '页面设置已更新，保存后才会发布。') {
+  const page = creatorPageById();
+  if (!page) return;
+  Object.assign(page, changes);
+  setHomepageLayout(homepageLayout);
+  setCreatorMessage(message);
+}
+
+function selectCreatorPage(id, scroll = false) {
+  if (!creatorPageById(id)) return;
+  selectedCreatorPageId = id;
+  syncCreatorPageControls();
+  byId('creator-selection-label').textContent = `当前页面：${creatorPageName(id)}`;
+  if (scroll) {
+    byId('homepage-creator-frame').contentWindow?.postMessage({
+      type: 'mosankai:creator-scroll',
+      id
+    }, window.location.origin);
+  }
+}
+
+function applyCreatorDragPatch(patch) {
+  if (!patch || typeof patch !== 'object') return;
+  if (patch.kind === 'title') {
+    homepageLayout.hero.titleX = numberInRange(patch.x, 50, 12, 88);
+    homepageLayout.hero.titleY = numberInRange(patch.y, 50, 18, 82);
+  } else if (patch.kind === 'hero-background') {
+    homepageLayout.hero.imageX = numberInRange(patch.x, 54, 0, 100);
+    homepageLayout.hero.imageY = numberInRange(patch.y, 50, 0, 100);
+  } else if (patch.kind === 'card' || patch.kind === 'page-background') {
+    const page = creatorPageById(patch.id);
+    if (!page) return;
+    if (patch.kind === 'card') {
+      page.x = numberInRange(patch.x, 50, 12, 88);
+      page.y = numberInRange(patch.y, 50, 18, 82);
+    } else {
+      page.imageX = numberInRange(patch.x, 50, 0, 100);
+      page.imageY = numberInRange(patch.y, 50, 0, 100);
+    }
+  } else {
+    return;
+  }
+  homepageLayout = cloneLayout(homepageLayout);
+  homepageLayoutDirty = true;
+  syncCreatorControls();
 }
 
 function closeCreator() {
@@ -1090,6 +1237,102 @@ document.querySelectorAll('[data-creator-viewport]').forEach(button => {
   });
 });
 
+byId('creator-page-select').addEventListener('change', event => {
+  selectCreatorPage(event.target.value, true);
+});
+
+byId('add-homepage-page').addEventListener('click', () => {
+  const pages = homepageLayout.content.extraPages;
+  if (pages.length >= 8) {
+    setCreatorMessage('最多可以新增 8 个滚动页。', 'error');
+    return;
+  }
+  const number = pages.length + 5;
+  const id = `custom-${Date.now().toString(36)}`;
+  pages.push({
+    id,
+    label: `PAGE / ${String(number).padStart(2, '0')}`,
+    title: '新页面标题',
+    body: '在右侧编辑这个页面的内容，并为它添加一张背景图。',
+    x: pages.length % 2 ? 58 : 42,
+    y: 50,
+    backgroundImage: '',
+    imageX: 50,
+    imageY: 50,
+    overlay: 78
+  });
+  selectedCreatorPageId = id;
+  setHomepageLayout(homepageLayout);
+  selectCreatorPage(id, true);
+  setCreatorMessage('已在主页末尾新增一个滚动页，请编辑后保存。', 'success');
+});
+
+byId('delete-homepage-page').addEventListener('click', () => {
+  const index = homepageLayout.content.extraPages.findIndex(page => page.id === selectedCreatorPageId);
+  if (index < 0) return;
+  if (!window.confirm('删除这个新增的滚动页吗？保存发布后线上页面才会被删除。')) return;
+  homepageLayout.content.extraPages.splice(index, 1);
+  selectedCreatorPageId = homepageLayout.content.extraPages[index - 1]?.id || 'support';
+  setHomepageLayout(homepageLayout);
+  selectCreatorPage(selectedCreatorPageId, true);
+  setCreatorMessage('页面已从预览中移除，保存后才会发布。', 'success');
+});
+
+[
+  ['creator-page-label', 'label'],
+  ['creator-page-title', 'title'],
+  ['creator-page-body', 'body']
+].forEach(([inputId, key]) => {
+  byId(inputId).addEventListener('input', event => {
+    updateSelectedCreatorPage({ [key]: event.target.value });
+  });
+});
+
+[
+  ['creator-page-overlay', 'overlay'],
+  ['creator-page-image-x', 'imageX'],
+  ['creator-page-image-y', 'imageY']
+].forEach(([inputId, key]) => {
+  byId(inputId).addEventListener('input', event => {
+    updateSelectedCreatorPage({ [key]: Number(event.target.value) });
+  });
+});
+
+byId('creator-page-background-file').addEventListener('change', async event => {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  const label = byId('creator-page-background-button');
+  const original = label.textContent;
+  label.textContent = '正在处理…';
+  label.classList.add('disabled');
+  setCreatorMessage();
+  try {
+    const image = await optimizedPageBackground(file);
+    const otherBackgroundsLength = [
+      ...Object.entries(homepageLayout.content.cards)
+        .filter(([id]) => id !== selectedCreatorPageId)
+        .map(([, page]) => page.backgroundImage || ''),
+      ...homepageLayout.content.extraPages
+        .filter(page => page.id !== selectedCreatorPageId)
+        .map(page => page.backgroundImage || '')
+    ].reduce((total, value) => total + value.length, 0);
+    if (otherBackgroundsLength + image.length > 1950000) {
+      throw new Error('所有页面背景图的总大小过大，请先移除一张图片。');
+    }
+    updateSelectedCreatorPage({ backgroundImage: image }, '背景图已加入预览，请调整焦点后保存。');
+  } catch (error) {
+    setCreatorMessage(error.message, 'error');
+  } finally {
+    label.textContent = original;
+    label.classList.remove('disabled');
+  }
+});
+
+byId('remove-page-background').addEventListener('click', () => {
+  updateSelectedCreatorPage({ backgroundImage: '' }, '已移除这个页面的背景图。');
+});
+
 byId('close-creator-button').addEventListener('click', closeCreator);
 
 byId('creator-previous-panel').addEventListener('click', () => {
@@ -1154,20 +1397,23 @@ window.addEventListener('message', event => {
     return;
   }
   if (event.data?.type === 'mosankai:creator-change') {
-    setHomepageLayout(event.data.layout, { send: false });
+    applyCreatorDragPatch(event.data.patch);
     setCreatorMessage('画布位置已调整，保存后才会发布到主页。');
     return;
   }
   if (event.data?.type === 'mosankai:creator-selection') {
+    if (event.data.pageId && creatorPageById(event.data.pageId)) {
+      selectCreatorPage(event.data.pageId);
+    }
     const labels = {
       title: '首屏标题',
-      background: '首屏背景焦点',
-      who: '关于区块',
-      features: '功能区块',
-      contact: '联系区块',
-      support: '支持区块'
+      'hero-background': '首屏背景焦点',
+      'page-background': `${creatorPageName(event.data.pageId)}背景焦点`
     };
-    byId('creator-selection-label').textContent = `当前选择：${labels[event.data.selection] || '页面整体'}`;
+    const cardSelection = event.data.selection === event.data.pageId && creatorPageById(event.data.pageId)
+      ? `${creatorPageName(event.data.pageId)}内容卡片`
+      : '';
+    byId('creator-selection-label').textContent = `当前选择：${labels[event.data.selection] || cardSelection || '页面整体'}`;
   }
 });
 

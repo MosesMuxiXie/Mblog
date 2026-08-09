@@ -59,10 +59,66 @@ test('normalizes homepage creator layout into safe visual bounds', () => {
     imageY: 50,
     overlay: 55
   });
-  assert.deepEqual(result.layout.content.cards.who, { x: 31, y: 64 });
-  assert.deepEqual(result.layout.content.cards.features, { x: 58, y: 50 });
+  assert.deepEqual(result.layout.content.cards.who, {
+    x: 31,
+    y: 64,
+    backgroundImage: '',
+    imageX: 50,
+    imageY: 50,
+    overlay: 78
+  });
+  assert.deepEqual(result.layout.content.cards.features, {
+    x: 58,
+    y: 50,
+    backgroundImage: '',
+    imageX: 50,
+    imageY: 50,
+    overlay: 78
+  });
 });
 
 test('rejects malformed homepage creator colors', () => {
   assert.match(validateHomepageLayout({ accent: 'red' }).error, /主题色/);
+});
+
+test('publishes per-page backgrounds and additional scroll pages', () => {
+  const result = validateHomepageLayout({
+    content: {
+      cards: { who: { backgroundImage: ONE_PIXEL_PNG, imageX: 24, imageY: 68, overlay: 72 } },
+      extraPages: [{
+        id: 'custom-about-more',
+        label: 'PAGE / 05',
+        title: '更多内容',
+        body: '这是新增的整屏滚动页。',
+        backgroundImage: ONE_PIXEL_PNG,
+        x: 57,
+        y: 46
+      }]
+    }
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.layout.content.cards.who.backgroundImage, ONE_PIXEL_PNG);
+  assert.equal(result.layout.content.cards.who.imageX, 24);
+  assert.deepEqual(result.layout.content.extraPages[0], {
+    id: 'custom-about-more',
+    label: 'PAGE / 05',
+    title: '更多内容',
+    body: '这是新增的整屏滚动页。',
+    x: 57,
+    y: 46,
+    backgroundImage: ONE_PIXEL_PNG,
+    imageX: 50,
+    imageY: 50,
+    overlay: 78
+  });
+});
+
+test('rejects unsafe page background data and invalid extra page ids', () => {
+  assert.match(validateHomepageLayout({
+    content: { cards: { who: { backgroundImage: 'data:image/png;base64,SGVsbG8=' } } }
+  }).error, /无法识别/);
+  assert.match(validateHomepageLayout({
+    content: { extraPages: [{ id: '<script>', title: 'x', body: 'y' }] }
+  }).error, /编号无效/);
 });

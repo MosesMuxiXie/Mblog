@@ -403,6 +403,12 @@ button {
     var(--hero-image) center / cover no-repeat;
 }
 
+.qa-panel.has-page-background {
+  background:
+    linear-gradient(135deg, rgba(4, 6, 4, var(--page-overlay, 0.78)), rgba(8, 11, 7, var(--page-overlay, 0.78))),
+    var(--page-background) var(--page-image-x, 50%) var(--page-image-y, 50%) / cover no-repeat;
+}
+
 .qa-panel__number {
   position: absolute;
   right: -0.04em;
@@ -421,10 +427,15 @@ button {
 }
 
 .qa-card {
+  --actual-card-width: min(calc(100% - 2.8rem), var(--card-width));
   position: absolute;
   top: var(--card-y, 50%);
-  left: var(--card-x, 42%);
-  width: min(calc(100% - 2.8rem), var(--card-width));
+  left: clamp(
+    calc(var(--actual-card-width) / 2 + 1.4rem),
+    var(--card-x, 42%),
+    calc(100% - var(--actual-card-width) / 2 - 1.4rem)
+  );
+  width: var(--actual-card-width);
   transform: translate(-50%, -50%);
 }
 
@@ -461,6 +472,10 @@ html.creator-preview {
 .creator-preview .hero,
 .creator-preview .qa-card {
   cursor: grab;
+}
+
+.creator-preview .qa-panel {
+  cursor: crosshair;
 }
 
 .creator-preview .hero.is-creator-dragging,

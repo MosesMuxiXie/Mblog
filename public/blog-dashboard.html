@@ -216,6 +216,59 @@
                 <p class="creator-control-help">在画布中滚动到对应区块，直接拖动虚线框即可改变位置。</p>
               </div>
 
+              <div class="creator-control-group creator-pages-control">
+                <div class="creator-control-title-row">
+                  <h3>滚动页面</h3>
+                  <button id="add-homepage-page" class="creator-mini-button" type="button">＋ 新增页面</button>
+                </div>
+                <label>
+                  <span>正在编辑</span>
+                  <select id="creator-page-select">
+                    <option value="who">01 · 关于</option>
+                    <option value="features">02 · 功能</option>
+                    <option value="contact">03 · 联系</option>
+                    <option value="support">04 · 支持</option>
+                  </select>
+                </label>
+                <div id="creator-custom-page-fields" class="creator-custom-page-fields hidden">
+                  <label>
+                    <span>页面标签</span>
+                    <input id="creator-page-label" type="text" maxlength="48" placeholder="PAGE / 05">
+                  </label>
+                  <label>
+                    <span>页面标题</span>
+                    <input id="creator-page-title" type="text" maxlength="120" placeholder="输入页面标题">
+                  </label>
+                  <label>
+                    <span>页面正文</span>
+                    <textarea id="creator-page-body" maxlength="1000" rows="4" placeholder="输入页面正文"></textarea>
+                  </label>
+                </div>
+                <div id="creator-page-background-preview" class="creator-page-background-preview empty">
+                  <img src="" alt="当前滚动页背景预览">
+                  <span>当前页面没有自定义背景</span>
+                </div>
+                <input id="creator-page-background-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+                <div class="creator-page-background-actions">
+                  <label id="creator-page-background-button" class="creator-secondary-button" for="creator-page-background-file">上传背景图</label>
+                  <button id="remove-page-background" class="creator-secondary-button" type="button" disabled>移除背景</button>
+                </div>
+                <label>
+                  <span>背景遮罩 <output id="creator-page-overlay-output">78%</output></span>
+                  <input id="creator-page-overlay" type="range" min="20" max="95" step="1" value="78">
+                </label>
+                <label>
+                  <span>水平焦点 <output id="creator-page-image-x-output">50%</output></span>
+                  <input id="creator-page-image-x" type="range" min="0" max="100" step="1" value="50">
+                </label>
+                <label>
+                  <span>垂直焦点 <output id="creator-page-image-y-output">50%</output></span>
+                  <input id="creator-page-image-y" type="range" min="0" max="100" step="1" value="50">
+                </label>
+                <button id="delete-homepage-page" class="creator-secondary-button danger hidden" type="button">删除这个新增页面</button>
+                <p class="creator-control-help">上传图片后可拖动画布空白处调整焦点；最多新增 8 个页面。</p>
+              </div>
+
               <div class="creator-inspector__actions">
                 <button id="undo-homepage-layout" class="creator-secondary-button" type="button" disabled>撤销未保存修改</button>
                 <button id="reset-homepage-layout" class="creator-secondary-button danger" type="button">恢复默认布局</button>
