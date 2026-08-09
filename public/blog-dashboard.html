@@ -40,6 +40,9 @@
         <button class="side-nav-item" type="button" data-panel="site-panel">
           <span>▧</span> 网站封面
         </button>
+        <button class="side-nav-item" type="button" data-panel="creator-panel">
+          <span>✣</span> 主页创作者
+        </button>
         <button class="side-nav-item" type="button" data-panel="findatime-panel">
           <span>◷</span> 约时间管理
         </button>
@@ -119,6 +122,7 @@
             <input id="homepage-cover-file" type="file"
               accept="image/png,image/jpeg,image/webp" hidden>
             <div class="homepage-cover-actions">
+              <button class="creator-launch-button" type="button" data-panel="creator-panel">进入主页创作者模式</button>
               <label id="homepage-cover-file-button" class="primary-button cover-upload-button"
                 for="homepage-cover-file">从本地选择图片</label>
               <button id="save-homepage-cover" class="primary-button" type="button" disabled>保存并应用</button>
@@ -137,6 +141,88 @@
               <li><span>03</span><p><strong>保存后立即生效</strong>重新打开首页即可看到新的封面。</p></li>
             </ol>
           </aside>
+        </div>
+      </section>
+
+      <section id="creator-panel" class="dashboard-panel creator-panel hidden">
+        <div class="creator-studio">
+          <header class="creator-topbar">
+            <div class="creator-topbar__identity">
+              <button id="close-creator-button" class="creator-icon-button" type="button" aria-label="退出创作者模式">×</button>
+              <span class="creator-topbar__divider"></span>
+              <div>
+                <span>HOMEPAGE CREATOR</span>
+                <strong>主页创作者模式</strong>
+              </div>
+            </div>
+            <div class="creator-topbar__tools" aria-label="预览尺寸">
+              <button class="creator-viewport-button active" type="button" data-creator-viewport="desktop">桌面</button>
+              <button class="creator-viewport-button" type="button" data-creator-viewport="mobile">手机</button>
+              <button id="creator-previous-panel" class="creator-icon-button" type="button" title="上一屏">↑</button>
+              <button id="creator-next-panel" class="creator-icon-button" type="button" title="下一屏">↓</button>
+            </div>
+            <div class="creator-topbar__actions">
+              <span id="creator-save-state">所有修改已保存</span>
+              <button id="save-homepage-layout" class="creator-save-button" type="button" disabled>保存并发布</button>
+            </div>
+          </header>
+
+          <div class="creator-workspace">
+            <div class="creator-canvas-area">
+              <div class="creator-canvas-note">
+                <span><i></i>实时主页</span>
+                <p>拖动标题或内容卡片调整位置；拖动首屏空白处移动背景焦点。</p>
+              </div>
+              <div id="creator-frame-shell" class="creator-frame-shell">
+                <iframe id="homepage-creator-frame" title="MOSANKAI 主页实时编辑画布"
+                  src="/?creator-preview=1"></iframe>
+              </div>
+            </div>
+
+            <aside class="creator-inspector">
+              <div class="creator-inspector__heading">
+                <span>DESIGN CONTROLS</span>
+                <h2>页面样式</h2>
+                <p id="creator-selection-label">当前选择：页面整体</p>
+              </div>
+
+              <div class="creator-control-group">
+                <h3>视觉主题</h3>
+                <label class="creator-color-control">
+                  <span>强调色</span>
+                  <input id="creator-accent" type="color" value="#c6ef46" data-layout-control="accent">
+                  <output id="creator-accent-output">#c6ef46</output>
+                </label>
+              </div>
+
+              <div class="creator-control-group">
+                <h3>首屏</h3>
+                <label>
+                  <span>标题大小 <output id="creator-title-scale-output">100%</output></span>
+                  <input id="creator-title-scale" type="range" min="55" max="145" step="1" value="100" data-layout-control="hero.titleScale">
+                </label>
+                <label>
+                  <span>背景遮罩 <output id="creator-overlay-output">66%</output></span>
+                  <input id="creator-overlay" type="range" min="20" max="90" step="1" value="66" data-layout-control="hero.overlay">
+                </label>
+              </div>
+
+              <div class="creator-control-group">
+                <h3>内容卡片</h3>
+                <label>
+                  <span>最大宽度 <output id="creator-card-width-output">960 px</output></span>
+                  <input id="creator-card-width" type="range" min="520" max="1120" step="10" value="960" data-layout-control="content.cardWidth">
+                </label>
+                <p class="creator-control-help">在画布中滚动到对应区块，直接拖动虚线框即可改变位置。</p>
+              </div>
+
+              <div class="creator-inspector__actions">
+                <button id="undo-homepage-layout" class="creator-secondary-button" type="button" disabled>撤销未保存修改</button>
+                <button id="reset-homepage-layout" class="creator-secondary-button danger" type="button">恢复默认布局</button>
+              </div>
+              <div id="creator-layout-message" class="creator-message" role="alert" aria-live="polite"></div>
+            </aside>
+          </div>
         </div>
       </section>
 

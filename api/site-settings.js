@@ -5,7 +5,8 @@ const {
 } = require('../lib/blogAdminStore');
 const {
   publicSiteSettings,
-  validateCoverImage
+  validateCoverImage,
+  validateHomepageLayout
 } = require('../lib/siteSettings');
 
 module.exports = async function handler(req, res) {
@@ -18,11 +19,26 @@ module.exports = async function handler(req, res) {
 
     if (req.method === 'PUT') {
       if (!(await requireAdmin(req, res))) return;
-      const validation = validateCoverImage(req.body?.coverImage);
-      if (validation.error) return res.status(400).json({ error: validation.error });
+      const current = await getSiteSettingsRecord() || {};
+      const hasCoverImage = Object.prototype.hasOwnProperty.call(req.body || {}, 'coverImage');
+      const hasLayout = Object.prototype.hasOwnProperty.call(req.body || {}, 'layout');
+      if (!hasCoverImage && !hasLayout) {
+        return res.status(400).json({ error: '没有可保存的站点设置' });
+      }
+
+      const coverValidation = hasCoverImage
+        ? validateCoverImage(req.body.coverImage)
+        : { coverImage: String(current.coverImage || '') };
+      if (coverValidation.error) return res.status(400).json({ error: coverValidation.error });
+
+      const layoutValidation = hasLayout
+        ? validateHomepageLayout(req.body.layout)
+        : validateHomepageLayout(current.layout);
+      if (layoutValidation.error) return res.status(400).json({ error: layoutValidation.error });
 
       const record = {
-        coverImage: validation.coverImage,
+        coverImage: coverValidation.coverImage,
+        layout: layoutValidation.layout,
         updatedAt: new Date().toISOString()
       };
       await setSiteSettingsRecord(record);
@@ -34,7 +50,12 @@ module.exports = async function handler(req, res) {
 
     if (req.method === 'DELETE') {
       if (!(await requireAdmin(req, res))) return;
-      const record = { coverImage: '', updatedAt: new Date().toISOString() };
+      const current = await getSiteSettingsRecord() || {};
+      const record = {
+        coverImage: '',
+        layout: validateHomepageLayout(current.layout).layout,
+        updatedAt: new Date().toISOString()
+      };
       await setSiteSettingsRecord(record);
       return res.status(200).json({
         success: true,

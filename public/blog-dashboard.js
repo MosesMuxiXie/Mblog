@@ -7,6 +7,23 @@ let slugTouched = false;
 let savedSelection = null;
 let homepageCoverImage = '';
 let homepageCoverDirty = false;
+let homepageCoverForPreview = '/img/m48a5_patton_cn.jpg';
+let homepageLayoutDirty = false;
+const DEFAULT_HOMEPAGE_LAYOUT = {
+  accent: '#c6ef46',
+  hero: { titleX: 50, titleY: 50, titleScale: 100, imageX: 54, imageY: 50, overlay: 66 },
+  content: {
+    cardWidth: 960,
+    cards: {
+      who: { x: 42, y: 50 },
+      features: { x: 58, y: 50 },
+      contact: { x: 42, y: 50 },
+      support: { x: 42, y: 50 }
+    }
+  }
+};
+let homepageLayout = JSON.parse(JSON.stringify(DEFAULT_HOMEPAGE_LAYOUT));
+let savedHomepageLayout = JSON.parse(JSON.stringify(DEFAULT_HOMEPAGE_LAYOUT));
 let findatimeChartData = [];
 let findatimeLoaded = false;
 let findatimeLoading = false;
@@ -160,14 +177,17 @@ function showPanel(panelId) {
   });
 
   const editorMode = panelId === 'editor-panel';
+  const creatorMode = panelId === 'creator-panel';
   document.body.classList.toggle('editor-mode', editorMode);
+  document.body.classList.toggle('creator-mode', creatorMode);
   const panelMeta = {
     'posts-panel': ['文章管理', 'EDITORIAL DESK'],
     'site-panel': ['网站封面', 'SITE APPEARANCE'],
+    'creator-panel': ['主页创作者模式', 'HOMEPAGE CREATOR'],
     'findatime-panel': ['约时间管理', 'FIND A TIME'],
     'account-panel': ['账号安全', 'ADMIN SECURITY']
   };
-  if (!editorMode) {
+  if (!editorMode && !creatorMode) {
     const [heading, eyebrow] = panelMeta[panelId] || ['管理后台', 'MOSANKAI ADMIN'];
     byId('page-heading').textContent = heading;
     byId('page-eyebrow').textContent = eyebrow;
@@ -175,16 +195,62 @@ function showPanel(panelId) {
   closeMenu();
   closeStudioPanels();
 
+  if (creatorMode) {
+    window.requestAnimationFrame(sendCreatorSettings);
+  }
+
   if (panelId === 'findatime-panel') {
     if (!findatimeLoaded) loadFindatimeDashboard();
     else window.requestAnimationFrame(drawFindatimeChart);
     if (window.location.pathname === '/admin/dashboard') {
       window.history.replaceState(null, '', '/admin/dashboard?panel=findatime-panel');
     }
-  } else if (!editorMode && window.location.pathname === '/admin/dashboard'
+  } else if (!editorMode && !creatorMode && window.location.pathname === '/admin/dashboard'
       && window.location.search.includes('panel=findatime-panel')) {
     window.history.replaceState(null, '', '/admin/dashboard');
   }
+}
+
+function numberInRange(value, fallback, min, max) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+}
+
+function normalizeHomepageLayout(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const hero = source.hero && typeof source.hero === 'object' ? source.hero : {};
+  const content = source.content && typeof source.content === 'object' ? source.content : {};
+  const inputCards = content.cards && typeof content.cards === 'object' ? content.cards : {};
+  const cards = {};
+  Object.keys(DEFAULT_HOMEPAGE_LAYOUT.content.cards).forEach(id => {
+    const input = inputCards[id] && typeof inputCards[id] === 'object' ? inputCards[id] : {};
+    const fallback = DEFAULT_HOMEPAGE_LAYOUT.content.cards[id];
+    cards[id] = {
+      x: numberInRange(input.x, fallback.x, 12, 88),
+      y: numberInRange(input.y, fallback.y, 18, 82)
+    };
+  });
+  return {
+    accent: /^#[0-9a-f]{6}$/i.test(String(source.accent || ''))
+      ? String(source.accent).toLowerCase()
+      : DEFAULT_HOMEPAGE_LAYOUT.accent,
+    hero: {
+      titleX: numberInRange(hero.titleX, 50, 12, 88),
+      titleY: numberInRange(hero.titleY, 50, 18, 82),
+      titleScale: numberInRange(hero.titleScale, 100, 55, 145),
+      imageX: numberInRange(hero.imageX, 54, 0, 100),
+      imageY: numberInRange(hero.imageY, 50, 0, 100),
+      overlay: numberInRange(hero.overlay, 66, 20, 90)
+    },
+    content: {
+      cardWidth: numberInRange(content.cardWidth, 960, 520, 1120),
+      cards
+    }
+  };
+}
+
+function cloneLayout(value) {
+  return JSON.parse(JSON.stringify(normalizeHomepageLayout(value)));
 }
 
 function normalizeSlug(value) {
@@ -296,16 +362,78 @@ async function optimizedHomepageCover(file) {
 
 function updateHomepageCoverPreview(value, isDefault = false) {
   const coverImage = safeImage(value) || '/img/m48a5_patton_cn.jpg';
+  homepageCoverForPreview = coverImage;
   homepageCoverImage = isDefault ? '' : coverImage;
   byId('homepage-cover-preview').querySelector('img').src = coverImage;
   byId('homepage-cover-status').textContent = isDefault ? '当前使用默认封面' : '当前使用自定义封面';
   byId('restore-homepage-cover').disabled = isDefault;
+  sendCreatorSettings();
+}
+
+function setCreatorMessage(text = '', type = '') {
+  const element = byId('creator-layout-message');
+  element.textContent = text;
+  element.className = `creator-message ${type}`.trim();
+}
+
+function updateCreatorSaveState() {
+  byId('save-homepage-layout').disabled = !homepageLayoutDirty;
+  byId('undo-homepage-layout').disabled = !homepageLayoutDirty;
+  byId('creator-save-state').textContent = homepageLayoutDirty ? '有未保存的修改' : '所有修改已保存';
+}
+
+function syncCreatorControls() {
+  byId('creator-accent').value = homepageLayout.accent;
+  byId('creator-accent-output').textContent = homepageLayout.accent;
+  byId('creator-title-scale').value = homepageLayout.hero.titleScale;
+  byId('creator-title-scale-output').textContent = `${Math.round(homepageLayout.hero.titleScale)}%`;
+  byId('creator-overlay').value = homepageLayout.hero.overlay;
+  byId('creator-overlay-output').textContent = `${Math.round(homepageLayout.hero.overlay)}%`;
+  byId('creator-card-width').value = homepageLayout.content.cardWidth;
+  byId('creator-card-width-output').textContent = `${Math.round(homepageLayout.content.cardWidth)} px`;
+  document.documentElement.style.setProperty('--creator-accent', homepageLayout.accent);
+  updateCreatorSaveState();
+}
+
+function sendCreatorSettings() {
+  const frame = byId('homepage-creator-frame');
+  if (!frame?.contentWindow) return;
+  frame.contentWindow.postMessage({
+    type: 'mosankai:creator-settings',
+    layout: homepageLayout,
+    coverImage: homepageCoverForPreview
+  }, window.location.origin);
+}
+
+function setHomepageLayout(value, { dirty = true, send = true } = {}) {
+  homepageLayout = cloneLayout(value);
+  if (dirty) homepageLayoutDirty = true;
+  syncCreatorControls();
+  if (send) sendCreatorSettings();
+}
+
+function setLayoutPath(path, value) {
+  const parts = path.split('.');
+  let target = homepageLayout;
+  parts.slice(0, -1).forEach(part => { target = target[part]; });
+  target[parts.at(-1)] = path === 'accent' ? String(value) : Number(value);
+  setHomepageLayout(homepageLayout);
+}
+
+function closeCreator() {
+  if (homepageLayoutDirty && !window.confirm('主页布局还有未保存的修改，确定退出吗？')) return;
+  showPanel('site-panel');
 }
 
 async function loadSiteSettings() {
   try {
     const settings = await api('/api/site-settings');
     updateHomepageCoverPreview(settings.coverImage, settings.isDefault);
+    homepageLayout = cloneLayout(settings.layout);
+    savedHomepageLayout = cloneLayout(settings.layout);
+    homepageLayoutDirty = false;
+    syncCreatorControls();
+    sendCreatorSettings();
     homepageCoverDirty = false;
     byId('save-homepage-cover').disabled = true;
   } catch (error) {
@@ -946,6 +1074,103 @@ byId('restore-homepage-cover').addEventListener('click', async event => {
   }
 });
 
+document.querySelectorAll('[data-layout-control]').forEach(control => {
+  control.addEventListener('input', () => {
+    setLayoutPath(control.dataset.layoutControl, control.value);
+    setCreatorMessage('预览已更新，保存后才会发布到主页。');
+  });
+});
+
+document.querySelectorAll('[data-creator-viewport]').forEach(button => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('[data-creator-viewport]').forEach(item => {
+      item.classList.toggle('active', item === button);
+    });
+    byId('creator-frame-shell').classList.toggle('mobile', button.dataset.creatorViewport === 'mobile');
+  });
+});
+
+byId('close-creator-button').addEventListener('click', closeCreator);
+
+byId('creator-previous-panel').addEventListener('click', () => {
+  byId('homepage-creator-frame').contentWindow?.scrollBy({ top: -innerHeight * .85, behavior: 'smooth' });
+});
+
+byId('creator-next-panel').addEventListener('click', () => {
+  byId('homepage-creator-frame').contentWindow?.scrollBy({ top: innerHeight * .85, behavior: 'smooth' });
+});
+
+byId('undo-homepage-layout').addEventListener('click', () => {
+  setHomepageLayout(savedHomepageLayout, { dirty: false });
+  homepageLayoutDirty = false;
+  syncCreatorControls();
+  setCreatorMessage('已撤销本次所有未保存修改。', 'success');
+});
+
+byId('reset-homepage-layout').addEventListener('click', () => {
+  if (!window.confirm('将画布恢复到初始布局？点击“保存并发布”后才会影响线上主页。')) return;
+  setHomepageLayout(DEFAULT_HOMEPAGE_LAYOUT);
+  setCreatorMessage('已载入默认布局，请预览后保存。', 'success');
+});
+
+byId('save-homepage-layout').addEventListener('click', async event => {
+  if (!homepageLayoutDirty) return;
+  const button = event.currentTarget;
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = '正在发布…';
+  setCreatorMessage();
+  try {
+    const settings = await api('/api/site-settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        layout: homepageLayout,
+        ...(homepageCoverDirty && homepageCoverImage ? { coverImage: homepageCoverImage } : {})
+      })
+    });
+    updateHomepageCoverPreview(settings.coverImage, settings.isDefault);
+    homepageCoverDirty = false;
+    byId('save-homepage-cover').disabled = true;
+    homepageLayout = cloneLayout(settings.layout);
+    savedHomepageLayout = cloneLayout(settings.layout);
+    homepageLayoutDirty = false;
+    syncCreatorControls();
+    sendCreatorSettings();
+    setCreatorMessage('主页布局已保存并发布。', 'success');
+  } catch (error) {
+    homepageLayoutDirty = true;
+    updateCreatorSaveState();
+    setCreatorMessage(error.message, 'error');
+  } finally {
+    button.textContent = original;
+    button.disabled = !homepageLayoutDirty;
+  }
+});
+
+window.addEventListener('message', event => {
+  if (event.origin !== window.location.origin || event.source !== byId('homepage-creator-frame').contentWindow) return;
+  if (event.data?.type === 'mosankai:creator-ready') {
+    sendCreatorSettings();
+    return;
+  }
+  if (event.data?.type === 'mosankai:creator-change') {
+    setHomepageLayout(event.data.layout, { send: false });
+    setCreatorMessage('画布位置已调整，保存后才会发布到主页。');
+    return;
+  }
+  if (event.data?.type === 'mosankai:creator-selection') {
+    const labels = {
+      title: '首屏标题',
+      background: '首屏背景焦点',
+      who: '关于区块',
+      features: '功能区块',
+      contact: '联系区块',
+      support: '支持区块'
+    };
+    byId('creator-selection-label').textContent = `当前选择：${labels[event.data.selection] || '页面整体'}`;
+  }
+});
+
 document.querySelectorAll('[data-panel]').forEach(button => {
   button.addEventListener('click', () => showPanel(button.dataset.panel));
 });
@@ -1177,7 +1402,7 @@ window.addEventListener('resize', () => {
 });
 window.addEventListener('beforeunload', event => {
   const unsavedArticle = document.body.classList.contains('editor-mode') && editorDirty;
-  if (!unsavedArticle && !homepageCoverDirty) return;
+  if (!unsavedArticle && !homepageCoverDirty && !homepageLayoutDirty) return;
   event.preventDefault();
   event.returnValue = '';
 });
