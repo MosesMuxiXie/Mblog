@@ -50,6 +50,17 @@ button { cursor: pointer; }
 }
 
 .brand span { color: var(--red); }
+.brand-group { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.language-switcher-slot { display: inline-flex; align-items: center; }
+.language-switcher-slot .language-switcher {
+  padding: 3px;
+  box-shadow: 0 4px 14px rgba(62, 50, 35, .11);
+}
+.language-switcher-slot .language-switcher button {
+  min-height: 29px;
+  padding: .3rem .65rem;
+  font-size: .74rem;
+}
 .header-actions { display: flex; align-items: center; gap: 14px; }
 .home-link { color: var(--muted); text-decoration: none; font-size: .92rem; }
 .home-link:hover { color: var(--red); }
@@ -404,6 +415,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--teal); box-shado
 
 @media (max-width: 560px) {
   .site-header { height: 66px; }
+  .brand-group { gap: 8px; }
+  .language-switcher-slot .language-switcher button { padding-inline: .52rem; }
   .header-actions { gap: 9px; }
   .home-link { font-size: .76rem; }
   .page-shell { width: min(94vw, 680px); }

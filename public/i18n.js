@@ -459,7 +459,8 @@
       const button = event.target.closest('[data-language]');
       if (button) setLanguage(button.dataset.language);
     });
-    document.body.appendChild(switcher);
+    const switcherSlot = document.getElementById('language-switcher-slot');
+    (switcherSlot || document.body).appendChild(switcher);
     updateSwitcher();
   }
 
